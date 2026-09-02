@@ -1,0 +1,18 @@
+{
+  "short_name": "Mind Mithra",
+  "name": "Mind Mithra — AI Dementia Cognitive Care",
+  "description": "Mind Mithra delivers personalized, offline-first cognitive care through AI, games, reminders, voice assistance, and caregiver support.",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#FAF7F2",
+  "theme_color": "#D97706",
+  "display": "standalone",
+  "orientation": "portrait",
+  "categories": ["medical", "health", "lifestyle", "utilities"]
+}

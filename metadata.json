@@ -1,0 +1,6 @@
+{
+  "name": "Mind Mithra",
+  "description": "AI-powered cultural cognitive care, facial mood detection, voice assistance, adaptive games, and caregiver telemetry for dementia care (Smart India Hackathon 2026).",
+  "requestFramePermissions": ["camera", "microphone", "geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
