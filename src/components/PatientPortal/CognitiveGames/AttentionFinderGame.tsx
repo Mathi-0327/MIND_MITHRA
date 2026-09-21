@@ -18,6 +18,8 @@ import { getCulturalGameDataSet, evaluateGameAdaptation, AdaptationOutput } from
 import { audioService } from '../../../lib/audioService';
 import { localDB } from '../../../lib/storage';
 import { GameCompletionModal } from './GameCompletionModal';
+import { gameVoiceController } from '../../../lib/gameVoiceController';
+import { GameVoiceOverlay } from './GameVoiceOverlay';
 
 interface AttentionFinderGameProps {
   patient: PatientProfile;
@@ -53,6 +55,11 @@ export const AttentionFinderGame: React.FC<AttentionFinderGameProps> = ({
   const [isCompleted, setIsCompleted] = useState(false);
   const [latestResult, setLatestResult] = useState<GameSessionResult | null>(null);
   const [adaptationOutput, setAdaptationOutput] = useState<AdaptationOutput | null>(null);
+
+  const [voiceAnswersCount, setVoiceAnswersCount] = useState<number>(0);
+  const [touchAnswersCount, setTouchAnswersCount] = useState<number>(0);
+  const [hintsUsed, setHintsUsed] = useState<number>(0);
+  const [isPaused, setIsPaused] = useState<boolean>(false);
 
   const totalGridSize = currentDifficulty === 1 ? 6 : currentDifficulty === 2 ? 8 : 12;
 
@@ -111,7 +118,73 @@ export const AttentionFinderGame: React.FC<AttentionFinderGameProps> = ({
     setStartTime(Date.now());
   }, [currentDifficulty]);
 
-  const handleItemTap = (item: TargetItem & { instanceId: string; isTarget: boolean }) => {
+  // Synchronize Voice Context
+  useEffect(() => {
+    if (isCompleted || !target || gridItems.length === 0) {
+      gameVoiceController.stopListening();
+      return;
+    }
+
+    const options = gridItems.map((itm) => ({
+      id: itm.instanceId,
+      label: itm.name,
+      synonyms: [itm.name.toLowerCase()],
+      isCorrect: itm.isTarget,
+    }));
+
+    gameVoiceController.setContext(
+      {
+        gameId: 'ner-attention-spotter',
+        gameCategory: 'ATTENTION',
+        gameTitle: 'Kaziranga Wildlife Spotlight',
+        level: currentDifficulty,
+        question: `Spot the target item: ${target.name}. Which one is it?`,
+        options,
+        hintText: `Look closely for the ${target.name} icon ${target.icon}.`,
+        patientName: patient.name.split(' ')[0],
+        language,
+      },
+      {
+        onAnswer: (instanceId) => {
+          const itm = gridItems.find((i) => i.instanceId === instanceId);
+          if (itm) {
+            setVoiceAnswersCount((v) => v + 1);
+            handleItemTap(itm, true);
+          }
+        },
+        onCommand: (cmd) => {
+          if (cmd === 'HINT') {
+            setHintsUsed((h) => h + 1);
+            gameVoiceController.speakQuestion(
+              `Here is a gentle hint: Look for ${target.name} with icon ${target.icon}.`,
+              true
+            );
+          } else if (cmd === 'REPEAT') {
+            gameVoiceController.speakQuestion(
+              `Spot the target item: ${target.name}. Which one is it?`,
+              true
+            );
+          } else if (cmd === 'PAUSE') {
+            setIsPaused(true);
+          } else if (cmd === 'CONTINUE') {
+            setIsPaused(false);
+          }
+        },
+      }
+    );
+
+    gameVoiceController.speakQuestion(`Spot the target: ${target.name}. Say it out loud or tap it.`, true);
+
+    return () => {
+      gameVoiceController.stopListening();
+    };
+  }, [target, roundsCompleted, isCompleted, currentDifficulty]);
+
+  const handleItemTap = (item: TargetItem & { instanceId: string; isTarget: boolean }, isVoice: boolean = false) => {
+    if (!isVoice) {
+      setTouchAnswersCount((t) => t + 1);
+    }
+
     if (item.isTarget) {
       audioService.playFeedbackSound('SUCCESS');
       const newFound = foundCount + 1;
@@ -156,6 +229,10 @@ export const AttentionFinderGame: React.FC<AttentionFinderGameProps> = ({
       abandoned: false,
       timestamp: new Date().toISOString(),
       feedbackText: 'Great focus and visual attention across all rounds!',
+      voiceAnswersCount,
+      touchAnswersCount,
+      voiceInteractions: voiceAnswersCount + (hintsUsed > 0 ? 1 : 0),
+      hintsUsed,
     };
 
     const allRecent = localDB.getGameSessions();
@@ -210,6 +287,29 @@ export const AttentionFinderGame: React.FC<AttentionFinderGameProps> = ({
           <RotateCcw className="w-3.5 h-3.5" />
           <span>Restart</span>
         </button>
+      </div>
+
+      {/* Universal Voice Interaction Overlay */}
+      <div className="mb-6">
+        <GameVoiceOverlay
+          onManualRepeat={() => {
+            if (target) {
+              gameVoiceController.speakQuestion(`Spot the target item: ${target.name}. Which one is it?`, true);
+            }
+          }}
+          onManualHint={() => {
+            setHintsUsed((h) => h + 1);
+            if (target) {
+              gameVoiceController.speakQuestion(`Look closely for the ${target.name} with icon ${target.icon}.`, true);
+            }
+          }}
+          onTogglePause={() => {
+            const next = !isPaused;
+            setIsPaused(next);
+            gameVoiceController.processSpokenTranscript(next ? 'pause' : 'continue');
+          }}
+          isPaused={isPaused}
+        />
       </div>
 
       {/* Target Mission Card */}

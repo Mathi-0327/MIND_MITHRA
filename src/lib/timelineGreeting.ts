@@ -3,7 +3,7 @@ import { t } from './translations';
 
 export type TimeOfDaySlot = 'MORNING' | 'AFTERNOON' | 'EVENING' | 'NIGHT';
 
-export interface TimelineGreetingDetails {
+export interface TimelineGreetingData {
   slot: TimeOfDaySlot;
   greetingText: string;
   periodName: string;
@@ -20,19 +20,20 @@ export interface TimelineGreetingDetails {
 }
 
 /**
- * Calculates current time-of-day slot based on standard 24-hour clock:
- * - MORNING: 05:00 - 11:59
- * - AFTERNOON: 12:00 - 16:59
- * - EVENING: 17:00 - 20:59
- * - NIGHT: 21:00 - 04:59
+ * Determine Time-of-Day slot based on the local system hours:
+ * - 05:00 AM – 11:59 AM: MORNING
+ * - 12:00 PM – 04:59 PM: AFTERNOON
+ * - 05:00 PM – 08:59 PM: EVENING
+ * - 09:00 PM – 04:59 AM: NIGHT
  */
 export function getCurrentTimeSlot(date: Date = new Date()): TimeOfDaySlot {
-  const hour = date.getHours();
-  if (hour >= 5 && hour < 12) {
+  const hours = date.getHours();
+
+  if (hours >= 5 && hours < 12) {
     return 'MORNING';
-  } else if (hour >= 12 && hour < 17) {
+  } else if (hours >= 12 && hours < 17) {
     return 'AFTERNOON';
-  } else if (hour >= 17 && hour < 21) {
+  } else if (hours >= 17 && hours < 21) {
     return 'EVENING';
   } else {
     return 'NIGHT';
@@ -40,13 +41,14 @@ export function getCurrentTimeSlot(date: Date = new Date()): TimeOfDaySlot {
 }
 
 /**
- * Returns rich localized time of day greeting metadata, themes, icons, and voice cues.
+ * Generates culturally tailored, elder-friendly greetings and adaptive routines
+ * according to the active time slot and preferred regional language.
  */
 export function getTimelineGreeting(
   language: SupportedLanguage = 'en',
   customSlot?: TimeOfDaySlot,
   date: Date = new Date()
-): TimelineGreetingDetails {
+): TimelineGreetingData {
   const slot = customSlot || getCurrentTimeSlot(date);
   
   // Format current live clock in clean 12-hour format
@@ -66,9 +68,12 @@ export function getTimelineGreeting(
         as: 'শুভ সোণালী প্ৰভাত! একাপ গৰম চাহ আৰু মৃদু ৰ’দৰ সৈতে আজিৰ মনৰ কাৰ্যকলাপ আৰম্ভ কৰক।',
         bn: 'এক নতুন মিষ্টি সকাল! এক কাপ গরম চা খেয়ে চলুন আজকের স্মৃতি ব্যায়াম শুরু করি।',
         hi: 'एक सुंदर और ताज़ा सुबह! गर्म चाय के साथ आज की हल्की दिमागी कसरत शुरू करें।',
+        ta: 'ஒரு இனிய காலை பொழுது! சூடான தேநீர் அருந்தி எளிய மனப்பயிற்சியை தொடங்குங்கள்.',
         mni: 'নুংঙাইরবা অয়ুক! চা থক্লগা ঙসিগী ৱাখলগী থবক হৌসি।',
         kha: 'Ka step ba sngewtynnad! Dih sha khluit bad sdang ka kam jingkynmaw.',
         lus: 'Zinglam nuam tak a ni e! Thingpui in pahin rilru sawizawina tan ang hmiang.',
+        grt: 'Pring namgipa! Cha ringe da·alni cognitive exercise-ko a·bachengbo.',
+        trp: 'Khumpar kaham! Cha nungwi tabukni cognitive kalani chengdi.',
       };
 
       const voiceOpenerMap: Record<SupportedLanguage, string> = {
@@ -76,9 +81,12 @@ export function getTimelineGreeting(
         as: 'শুভ প্ৰভাত! আজিৰ দিনটো আপোনাৰ বাবে আনন্দ আৰু শান্তিময় হওক।',
         bn: 'সুপ্রভাত! আশা করি আপনার সকালটি খুব সুন্দর এবং আনন্দময় কাটছে।',
         hi: 'शुभ प्रभात! आपका दिन सुखद, शांत और मंगलमय हो।',
+        ta: 'காலை வணக்கம்! இன்றைய நாள் அமைதியாகவும் மகிழ்ச்சியாகவும் அமையட்டும்.',
         mni: 'য়ুংথোইবা অয়ুক! ঙসিগী নুমিৎ অসি নুংঙাইবা ওইরসনু।',
         kha: 'Khublei Step! Nga kitbok ia phi ba phin suk mynta ka sngi.',
         lus: 'Chibai Zinglam! Vawiin chu i tan ni duhawm tak lo ni rawh se.',
+        grt: 'Pring namgipa! Da·alni sal nang·na tom·tomani ong·china.',
+        trp: 'Khumpar kaham! Nini sal kaham tongthot wngto.',
       };
 
       return {
@@ -107,9 +115,12 @@ export function getTimelineGreeting(
         as: 'শান্ত অপৰাহ্ন! অলপ পানী খাওক, জিৰণি লওক আৰু মিঠা সুৰৰ আনন্দ লওক।',
         bn: 'শান্ত দুপুর! পর্যাপ্ত জল খান, বিশ্রাম নিন এবং কিছু মনোরম সুর শুনুন।',
         hi: 'शांत दोपहर! पानी पिएं, आराम से बैठें और मधुर लोक संगीत का आनंद लें।',
+        ta: 'அமைதியான மதிய பொழுது! நீர் அருந்தி, ஓய்வெடுத்து அமைதியான இசையை ரசியுங்கள்.',
         mni: 'নুংঙাইরবা নুমিৎদাং! পোথাবিয়ু অমসুং ঈশৈ তানবিয়ু।',
         kha: 'Ka janmiet ba jah thait! Dih um bad shong thait suk.',
         lus: 'Chhunchaw nuam tak a ni e! Tui in tha la, hahchawl rawh le.',
+        grt: 'Sal-jatchi namgipa! Chi ringbo aro git tom·tomaniko knabo.',
+        trp: 'Salbeng kaham! Twi nungdi aro rwchapmung khwnadi.',
       };
 
       const voiceOpenerMap: Record<SupportedLanguage, string> = {
@@ -117,9 +128,12 @@ export function getTimelineGreeting(
         as: 'শুভ অপৰাহ্ন! দুপৰীয়াৰ আহাৰ নিশ্চয় তৃপ্তিদায়ক হ’ল। আহক অলপ সময় একেলগে কথা পাতোঁ।',
         bn: 'শুভ অপরাহ্ন! আশা করি দুপুরের খাবার ভালো হয়েছে। চলুন একসাথে কিছুটা সময় কাটাই।',
         hi: 'शुभ दोपहर! आशा है आपने दोपहर का भोजन कर लिया होगा। आइए कुछ समय साथ बिताते हैं।',
+        ta: 'மதிய வணக்கம்! உணவு இனிதாக அமைந்ததா? சிறிது நேரம் ஒன்றாக உரையாடுவோம்.',
         mni: 'নুমিৎদাংৱাইৰম শুভ! চাক চাবদা নুংঙাইরমগনি থাজরি।',
         kha: 'Khublei Janmiet! Nga kyrmen ba phi la dep bam ja.',
         lus: 'Chibai Chhunchaw! Chhunchaw i puar em? Inbia ang hmiang.',
+        grt: 'Sal-jatchi namgipa! Cha mi cha·aha ma? Ang baksa agangrikna.',
+        trp: 'Salbeng kaham! Chah nungwi kaphang kok sahdi.',
       };
 
       return {
@@ -148,9 +162,12 @@ export function getTimelineGreeting(
         as: 'মৃদু সন্ধিয়া নামি আহিছে। পৰিয়ালৰ সৈতে স্মৃতি মেল আৰু মন শান্ত কৰা বাঁহীৰ সুৰ শুনক।',
         bn: 'স্নিগ্ধ সন্ধ্যা নেমে এসেছে। পরিবারের সাথে কথা বলুন এবং পুরনো স্মৃতির মধুর গান শুনুন।',
         hi: 'सुहानी शाम का समय है। परिवार की सुखद यादें ताज़ा करें और बाँसुरी की मधुर धुन सुनें।',
+        ta: 'மாலை வேளை வந்துவிட்டது. குடும்ப நினைவுகளை அசைபோட்டு புல்லாங்குழல் இசையை கேளுங்கள்.',
         mni: 'নুমিদাংগী মতম ওইরে! ইমুংগী মরমদা নীংশিংসি অমসুং ঈশৈ তানসি।',
         kha: 'Ka janmiet ba sngewbha! Iakren bad ka iing bad sngap jingsur.',
         lus: 'Tlai lam nuam tak a ni e! Chhungkaw thlalak en pahin hla ngai thla ang.',
+        grt: 'Attam namgipa! Nokdangni gisik ra·ani gitko knabo.',
+        trp: 'Saniri kaham! Nokguni kok tei rwchapmung khwnadi.',
       };
 
       const voiceOpenerMap: Record<SupportedLanguage, string> = {
@@ -158,9 +175,12 @@ export function getTimelineGreeting(
         as: 'শুভ সন্ধিয়া! গধূলিৰ এই শান্ত সময়ত পৰিয়ালৰ ছবি চাব নে বাঁহীৰ সুৰ শুনিব?',
         bn: 'শুভ সন্ধ্যা! এই মিষ্টি সন্ধ্যায় পরিবারের অ্যালবাম দেখতে বা গান শুনতে চান?',
         hi: 'शुभ संध्या! शाम का शांत समय है। क्या आप पारिवारिक तस्वीरें देखना या संगीत सुनना चाहेंगे?',
+        ta: 'மாலை வணக்கம்! குடும்ப புகைப்படங்களை பார்க்கலாமா அல்லது பாடல் கேட்கலாமா?',
         mni: 'নুমিদাং শুভ! ঈশৈ তানবিয়ু নত্রগা নীংশিংপোৎ য়েংবিয়ু।',
         kha: 'Khublei Mynmiet! Phi kwah ban peit dur ne sngap jingrwai?',
         lus: 'Chibai Tlai lam! Thlalak en nge hla ngaihthlak i duh?',
+        grt: 'Attam namgipa! Sal re·angaha, nokdangni noksako nina?',
+        trp: 'Saniri kaham! Sal hasaokha, photono naiya?',
       };
 
       return {
@@ -189,9 +209,12 @@ export function getTimelineGreeting(
         as: 'শান্ত ৰাত্ৰিৰ নিস্তব্ধ সময়। ঔষধ খাই লওক, মন শান্ত কৰক আৰু আৰামেৰে টোপনি যাওক।',
         bn: 'শান্ত ও নিরাপদ রাত। রাতের ওষুধ নিয়ে মন শান্ত করুন এবং গভীর ঘুমে বিশ্রাম নিন।',
         hi: 'शांत रात्रि का समय। अपनी दवा लें, मन को तनावमुक्त करें और सुखद विश्राम करें।',
+        ta: 'அமைதியான இரவு. மாலை மருந்துகளை உட்கொண்டு நிம்மதியாக உறங்குங்கள்.',
         mni: 'শান্ত নুমিদাং! হিদাক চারগা নুংঙাইনা পোথাবিয়ু।',
         kha: 'Ka miet ba jai-jai! Dih dawai bad thiah suk.',
         lus: 'Zan thianghlim tak a ni e! Damdawi ei la, thlamuang takin mu rawh le.',
+        grt: 'Wal namgipa! Sam ringbo aro tom·tome tusibo.',
+        trp: 'Hor kaham! Bwtwk nungdi aro kahamwi thudi.',
       };
 
       const voiceOpenerMap: Record<SupportedLanguage, string> = {
@@ -199,9 +222,12 @@ export function getTimelineGreeting(
         as: 'শুভ ৰাত্ৰি! আপোনাৰ টোপনি গভীৰ আৰু শান্তিময় হওক। মই সদায় আপোনাৰ কাষতেই আছোঁ।',
         bn: 'শুভ রাত্রি! আপনার ঘুম গভীর ও সুখকর হোক। আমি সবসময় আপনার পাশেই আছি।',
         hi: 'शुभ रात्रि! आपको गहरी और शांत नींद आए। मैं हर पल आपके साथ हूँ।',
+        ta: 'இரவு வணக்கம்! ஆழ்ந்த அமைதியான உறக்கம் கிடைக்கட்டும். நான் உங்கள் அருகிலேயே உள்ளேன்.',
         mni: 'নুমিদাং শুভ! নুংঙাইনা পোথাবিয়ু। ঐ অদোমগা লোয়ননা লৈরি।',
         kha: 'Khublei Miet! Suk ba thiah. Nga don ryngkat bad phi.',
         lus: 'Muan taka mut le! Hahchawl tha rawh. I bulah ka awm reng e.',
+        grt: 'Wal namgipa! Tom·tome tusibo, anga nang· baksa donga.',
+        trp: 'Hor kaham! Kahamwi thudi, ang nini kaphang tongnai.',
       };
 
       return {

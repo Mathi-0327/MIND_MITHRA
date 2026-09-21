@@ -64,6 +64,24 @@ const REGIONAL_SAMPLES: Record<SupportedLanguage, LanguageAudioSample> = {
     sampleSpokenText: 'Chibai! Mind Mithra ka ni a, i tanpuitu duh tak. Vawiin chu hlim takin hun i hmang ang hmiang.',
     description: 'Mizoram & Lushai Hills',
   },
+  ta: {
+    code: 'ta',
+    nativeTitle: 'தமிழ் (Tamil)',
+    sampleSpokenText: 'வணக்கம்! நான் மைண்ட் மித்ரா (Mind Mithra), உங்கள் பாசமான நினைவுத் தோழன். வாருங்கள், நம் பழைய இனிய நினைவுகளைப் புதுப்பிப்போம்.',
+    description: 'Tamil Nadu & Southern Region',
+  },
+  grt: {
+    code: 'grt',
+    nativeTitle: 'A·chik (Garo)',
+    sampleSpokenText: 'Namgipa sal! Anga Mind Mithra, nang·ni ripeng. Da·al namgipa chasongko ranta ka·na.',
+    description: 'Garo Hills & Western Meghalaya',
+  },
+  trp: {
+    code: 'trp',
+    nativeTitle: 'ককবরক (Kokborok)',
+    sampleSpokenText: 'Khulumkha! Ani mung Mind Mithra, nini kaham logi. Tini chwng kaham kokno manlaisi.',
+    description: 'Tripura Tribal Communities',
+  },
   en: {
     code: 'en',
     nativeTitle: 'English',

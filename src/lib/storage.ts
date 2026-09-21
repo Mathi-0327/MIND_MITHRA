@@ -12,27 +12,63 @@ import {
   PatientMoodLog,
   CaregiverAlert,
   FamilyMember,
-  MedicalReportRecord
+  MedicalReportRecord,
+  MemoryGraphNode,
+  MemoryGraphEdge,
+  MemoryGraphData,
+  ElderKnowledgeItem,
+  RouteMemory,
+  RouteWaypoint,
+  PersonalSoundItem,
+  DailyJournalEntry,
+  MemoryCapsule,
+  MemoryChain,
+  MemoryChainQuestion,
+  MemoryConfidenceMap,
+  ConfidenceDomainScore,
+  UserPreferenceProfile,
+  MoodObservationRecord,
+  CaregiverGameControl,
+  EnrolledFaceTemplate,
+  CareObservationEvent,
+  GameVoiceEvent
 } from '../types';
+import { faceRecognitionEngine } from './faceRecognitionEngine';
 
 const STORAGE_KEYS = {
-  PATIENT_PROFILE: 'manas_patient_profile',
-  PATIENT_REGISTRY: 'manas_patient_registry',
-  ACTIVE_PATIENT_ID: 'manas_active_patient_id',
-  SESSION_AUTH: 'manas_session_auth',
-  SYNC_QUEUE: 'manas_sync_queue',
-  GAME_SESSIONS: 'manas_game_sessions',
-  LOCAL_REMINDERS: 'manas_local_reminders',
-  LOCAL_MEMORIES: 'manas_local_memories',
-  CAREGIVER_INSTRUCTIONS: 'manas_caregiver_instructions',
-  AI_OBSERVATIONS: 'manas_ai_observations',
-  AI_RECOMMENDATIONS: 'manas_ai_recommendations',
-  NETWORK_SIMULATION: 'manas_network_simulation',
-  APP_SETTINGS: 'manas_app_settings',
-  MOOD_LOGS: 'manas_patient_mood_logs',
-  CAREGIVER_ALERTS: 'manas_caregiver_alerts',
-  FAMILY_MEMBERS: 'manas_family_members',
-  MEDICAL_REPORTS: 'manas_medical_reports',
+  PATIENT_PROFILE: 'mind_mithra_patient_profile',
+  PATIENT_REGISTRY: 'mind_mithra_patient_registry',
+  ACTIVE_PATIENT_ID: 'mind_mithra_active_patient_id',
+  SESSION_AUTH: 'mind_mithra_session_auth',
+  SYNC_QUEUE: 'mind_mithra_sync_queue',
+  GAME_SESSIONS: 'mind_mithra_game_sessions',
+  LOCAL_REMINDERS: 'mind_mithra_local_reminders',
+  LOCAL_MEMORIES: 'mind_mithra_local_memories',
+  CAREGIVER_INSTRUCTIONS: 'mind_mithra_caregiver_instructions',
+  AI_OBSERVATIONS: 'mind_mithra_ai_observations',
+  AI_RECOMMENDATIONS: 'mind_mithra_ai_recommendations',
+  NETWORK_SIMULATION: 'mind_mithra_network_simulation',
+  APP_SETTINGS: 'mind_mithra_app_settings',
+  MOOD_LOGS: 'mind_mithra_patient_mood_logs',
+  CAREGIVER_ALERTS: 'mind_mithra_caregiver_alerts',
+  FAMILY_MEMBERS: 'mind_mithra_family_members',
+  MEDICAL_REPORTS: 'mind_mithra_medical_reports',
+  // MIND MITHRA Reference Features Expansion Keys
+  MEMORY_GRAPH_NODES: 'mind_mithra_memory_graph_nodes',
+  MEMORY_GRAPH_EDGES: 'mind_mithra_memory_graph_edges',
+  ELDER_KNOWLEDGE: 'mind_mithra_elder_knowledge',
+  ROUTE_MEMORIES: 'mind_mithra_route_memories',
+  PERSONAL_SOUNDS: 'mind_mithra_personal_sounds',
+  DAILY_JOURNALS: 'mind_mithra_daily_journals',
+  MEMORY_CAPSULES: 'mind_mithra_memory_capsules',
+  MEMORY_CHAINS: 'mind_mithra_memory_chains',
+  CONFIDENCE_MAPS: 'mind_mithra_confidence_maps',
+  USER_PREFERENCES: 'mind_mithra_user_preferences',
+  MOOD_OBSERVATIONS: 'mind_mithra_mood_observations',
+  CAREGIVER_GAME_CONTROLS: 'mind_mithra_caregiver_game_controls',
+  ENROLLED_FACES: 'mind_mithra_enrolled_faces',
+  CARE_OBSERVATION_EVENTS: 'mind_mithra_care_observation_events',
+  GAME_VOICE_EVENTS: 'mind_mithra_game_voice_events',
 };
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
@@ -819,9 +855,485 @@ export const INITIAL_MEDICAL_REPORTS: MedicalReportRecord[] = [
   }
 ];
 
+export const INITIAL_MEMORY_GRAPH_NODES: MemoryGraphNode[] = [
+  {
+    id: 'node-ravi',
+    patientId: 'patient-ravi-001',
+    type: 'PEOPLE',
+    title: 'Ravi Kumar',
+    subtitle: 'Self (Father & Grandfather, Born in Tezpur)',
+    imageUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&auto=format&fit=crop&q=80',
+    categoryTag: 'Family Self',
+    connectedCount: 5,
+  },
+  {
+    id: 'node-ananya',
+    patientId: 'patient-ravi-001',
+    type: 'PEOPLE',
+    title: 'Ananya (Granddaughter)',
+    subtitle: 'Age 8, Loves Rhinos & School Drawing',
+    imageUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=200&auto=format&fit=crop&q=80',
+    categoryTag: 'Family',
+    connectedCount: 3,
+  },
+  {
+    id: 'node-priyanka',
+    patientId: 'patient-ravi-001',
+    type: 'PEOPLE',
+    title: 'Priyanka (Daughter)',
+    subtitle: 'Primary Caregiver & Biology Teacher',
+    imageUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&auto=format&fit=crop&q=80',
+    categoryTag: 'Family',
+    connectedCount: 3,
+  },
+  {
+    id: 'node-kaziranga',
+    patientId: 'patient-ravi-001',
+    type: 'PLACES',
+    title: 'Kaziranga National Park',
+    subtitle: 'Family Safari Holiday in Nov 2023',
+    imageUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=400&auto=format&fit=crop&q=80',
+    categoryTag: 'Heritage Nature',
+    connectedCount: 3,
+  },
+  {
+    id: 'node-tezpur',
+    patientId: 'patient-ravi-001',
+    type: 'PLACES',
+    title: 'Ancestral Home (Tezpur)',
+    subtitle: 'Heritage Courtyard near Brahmaputra',
+    imageUrl: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&auto=format&fit=crop&q=80',
+    categoryTag: 'Hometown',
+    connectedCount: 3,
+  },
+  {
+    id: 'node-rongali-bihu',
+    patientId: 'patient-ravi-001',
+    type: 'EVENTS',
+    title: 'Rongali Bihu Spring Festival',
+    subtitle: 'Annual Courtyard Celebrations with Pitha & Music',
+    imageUrl: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&auto=format&fit=crop&q=80',
+    categoryTag: 'Folk Festival',
+    connectedCount: 3,
+  },
+  {
+    id: 'node-bihu-dhol',
+    patientId: 'patient-ravi-001',
+    type: 'MUSIC',
+    title: 'Heritage Bihu Dhol Drum',
+    subtitle: 'Handcrafted Wooden Drum Played for 40+ Years',
+    categoryTag: 'Traditional Instrument',
+    connectedCount: 3,
+  },
+  {
+    id: 'node-assam-tea',
+    patientId: 'patient-ravi-001',
+    type: 'MEMORIES',
+    title: 'Morning Assam CTC Tea',
+    subtitle: 'Veranda Spiced Tea with Ginger & Cardamom',
+    categoryTag: 'Daily Ritual',
+    connectedCount: 2,
+  },
+  {
+    id: 'node-folk-song',
+    patientId: 'patient-ravi-001',
+    type: 'MUSIC',
+    title: 'Mon Mor Uri Gole (Folk Song)',
+    subtitle: 'Traditional Assamese Melody of Spring',
+    categoryTag: 'Folk Song',
+    connectedCount: 2,
+  }
+];
+
+export const INITIAL_MEMORY_GRAPH_EDGES: MemoryGraphEdge[] = [
+  { id: 'edge-1', source: 'node-ravi', target: 'node-ananya', relationship: 'Grandfather & Granddaughter' },
+  { id: 'edge-2', source: 'node-ravi', target: 'node-priyanka', relationship: 'Father & Daughter' },
+  { id: 'edge-3', source: 'node-priyanka', target: 'node-ananya', relationship: 'Mother & Daughter' },
+  { id: 'edge-4', source: 'node-ananya', target: 'node-kaziranga', relationship: 'Holiday Safari in Kaziranga' },
+  { id: 'edge-5', source: 'node-ravi', target: 'node-tezpur', relationship: 'Ancestral Birthplace' },
+  { id: 'edge-6', source: 'node-tezpur', target: 'node-rongali-bihu', relationship: 'Celebrated in Courtyard' },
+  { id: 'edge-7', source: 'node-ravi', target: 'node-bihu-dhol', relationship: 'Plays Drum for 40+ Years' },
+  { id: 'edge-8', source: 'node-ananya', target: 'node-bihu-dhol', relationship: 'Learned Rhythm from Grandfather' },
+  { id: 'edge-9', source: 'node-kaziranga', target: 'node-assam-tea', relationship: 'Enjoyed at Forest Lodge' },
+  { id: 'edge-10', source: 'node-rongali-bihu', target: 'node-folk-song', relationship: 'Spring Festival Melody' }
+];
+
+export const INITIAL_ELDER_KNOWLEDGE: ElderKnowledgeItem[] = [
+  {
+    id: 'kno-1',
+    patientId: 'patient-ravi-001',
+    title: 'Secret Family Recipe: Assam Bilahi Masor Tenga (Sour Fish Curry)',
+    category: 'RECIPE',
+    region: 'Assam',
+    elderContributor: 'Ravi Kumar',
+    content: 'The secret to authentic Masor Tenga is simmering fresh Rohu fish with ripe native vine tomatoes (Bilahi), elephant apple (Ou Tenga) slices, and a tempering of Paanch Phoron in mustard oil. Never boil the fish too harshly; let the sour broth soak into the fish gently.',
+    tags: ['Masor Tenga', 'Assamese Fish Curry', 'Ou Tenga', 'Traditional Cooking'],
+    isFamilyLegacy: true,
+    taughtToFamilyMembers: ['Priyanka Kumar (Daughter)', 'Nilakshi Kumar (Daughter-in-law)'],
+    createdAt: '2026-08-15T09:30:00.000Z'
+  },
+  {
+    id: 'kno-2',
+    patientId: 'patient-ravi-001',
+    title: 'Technique of Hand-Tuning the Bihu Dhol',
+    category: 'CRAFT',
+    region: 'Tezpur, Assam',
+    elderContributor: 'Ravi Kumar',
+    content: 'A good Dhol requires aged jackfruit wood (Kothal). Wet the cowhide membrane lightly before sunrise, and tighten the leather straps (Boli) in a cross-pattern until you get the sharp, resonant treble sound when struck with the stick (Dhorni).',
+    tags: ['Bihu Dhol', 'Musical Craft', 'Assamese Percussion', 'Woodwork'],
+    isFamilyLegacy: true,
+    taughtToFamilyMembers: ['Bikash (Neighbor)', 'Ananya (Granddaughter)'],
+    createdAt: '2026-08-28T14:20:00.000Z'
+  },
+  {
+    id: 'kno-3',
+    patientId: 'patient-ravi-001',
+    title: 'Selecting the Second Flush Assam Tea Leaves',
+    category: 'FARMING',
+    region: 'Brahmaputra Valley',
+    elderContributor: 'Ravi Kumar',
+    content: 'In June, during the second flush harvest, look for the two leaves and a golden bud. The golden tips carry the malty, rich amber liquor that makes Assam tea world-famous.',
+    tags: ['Tea Estate', 'Farming Wisdom', 'Assam Tea', 'Harvest'],
+    isFamilyLegacy: true,
+    taughtToFamilyMembers: ['Priyanka Kumar (Daughter)'],
+    createdAt: '2026-09-02T11:00:00.000Z'
+  }
+];
+
+export const INITIAL_ROUTE_MEMORIES: RouteMemory[] = [
+  {
+    id: 'route-1',
+    patientId: 'patient-ravi-001',
+    title: 'Morning Peaceful Stroll: Veranda to Tezpur Mahabhairab Temple',
+    origin: 'Home Courtyard (Veranda)',
+    destination: 'Tezpur Mahabhairab Temple Gate',
+    consentGiven: true,
+    notes: 'A quiet, familiar shaded route walked every morning for over 35 years. Pavement has stone steps near the lotus pond.',
+    createdAt: '2026-07-20T08:00:00.000Z',
+    waypoints: [
+      {
+        id: 'wp-1',
+        name: 'Home Front Gate & Jasmine Bush',
+        landmarkDescription: 'Wooden gate with blooming white jasmine flowers and morning birds chirping',
+        icon: 'Home',
+        orderIndex: 0,
+        memoryNote: 'Always make sure gate latch is clicked closed'
+      },
+      {
+        id: 'wp-2',
+        name: 'Century-Old Banyan Tree Corner',
+        landmarkDescription: 'Sprawling ancient Banyan tree providing broad shade and cool morning breeze',
+        icon: 'TreePine',
+        orderIndex: 1,
+        memoryNote: 'Turn gently right at the stone bench under the banyan'
+      },
+      {
+        id: 'wp-3',
+        name: 'Village Lotus Pond & Post Office',
+        landmarkDescription: 'Pink lotus flowers floating on clear water, next to the historic red post office box',
+        icon: 'Compass',
+        orderIndex: 2,
+        memoryNote: 'Enjoy watching ducks on the pond; rest here for 1 minute'
+      },
+      {
+        id: 'wp-4',
+        name: 'Temple Archway & Brass Bell',
+        landmarkDescription: 'Ancient carved stone archway with brass bells and the gentle fragrance of incense',
+        icon: 'Bell',
+        orderIndex: 3,
+        memoryNote: 'Destination reached! Sit on the courtyard marble steps'
+      }
+    ]
+  },
+  {
+    id: 'route-2',
+    patientId: 'patient-ravi-001',
+    title: 'Afternoon Route: House to Weekly Tezpur Green Market',
+    origin: 'Home Veranda',
+    destination: 'Tezpur Weekly Farmers Bazaar',
+    consentGiven: true,
+    notes: 'Short walk to buy fresh mint, coriander, and seasonal greens.',
+    createdAt: '2026-08-10T15:30:00.000Z',
+    waypoints: [
+      {
+        id: 'wp-m1',
+        name: 'Blue Corner Corner Tea Stall',
+        landmarkDescription: 'Aroma of boiling ginger tea and cheerful greetings from tea master Ramen',
+        icon: 'Coffee',
+        orderIndex: 0,
+        memoryNote: 'Wave hello to Ramen at the corner'
+      },
+      {
+        id: 'wp-m2',
+        name: 'Old Library Reading Hall',
+        landmarkDescription: 'Yellow heritage building with wooden shutters where newspapers are displayed',
+        icon: 'BookOpen',
+        orderIndex: 1,
+        memoryNote: 'Cross the zebra crossing gently here'
+      },
+      {
+        id: 'wp-m3',
+        name: 'Green Grocers Canopy',
+        landmarkDescription: 'Colorful stalls with fresh leafy Saag, gourd, and seasonal local bananas',
+        icon: 'ShoppingBag',
+        orderIndex: 2,
+        memoryNote: 'Destination reached: Fresh vegetables pavilion'
+      }
+    ]
+  }
+];
+
+export const INITIAL_PERSONAL_SOUNDS: PersonalSoundItem[] = [
+  {
+    id: 'snd-1',
+    patientId: 'patient-ravi-001',
+    title: "Daughter Priyanka's Calming Reassurance",
+    category: 'FAMILY_VOICE',
+    sourcePerson: 'Priyanka Kumar (Daughter)',
+    isFavorite: true,
+    durationSeconds: 24,
+  },
+  {
+    id: 'snd-2',
+    patientId: 'patient-ravi-001',
+    title: "Granddaughter Ananya's Cheerful Laugh & Song",
+    category: 'FAMILY_VOICE',
+    sourcePerson: 'Ananya (Granddaughter)',
+    isFavorite: true,
+    durationSeconds: 18,
+  },
+  {
+    id: 'snd-3',
+    patientId: 'patient-ravi-001',
+    title: 'Gentle Monsoon Courtyard Rain',
+    category: 'RAIN_WIND',
+    isFavorite: true,
+    proceduralFreq: 180,
+  },
+  {
+    id: 'snd-4',
+    patientId: 'patient-ravi-001',
+    title: 'Peaceful Morning Bamboo Flute (Brahmaputra)',
+    category: 'TRADITIONAL_MUSIC',
+    isFavorite: true,
+    proceduralFreq: 260,
+  },
+  {
+    id: 'snd-5',
+    patientId: 'patient-ravi-001',
+    title: 'Veranda Morning Songbirds & Breeze',
+    category: 'NATURE',
+    isFavorite: false,
+    proceduralFreq: 420,
+  }
+];
+
+export const INITIAL_DAILY_JOURNAL: DailyJournalEntry[] = [
+  {
+    id: 'jour-1',
+    patientId: 'patient-ravi-001',
+    dateStr: '2026-09-19',
+    timestamp: '2026-09-19T08:45:00.000Z',
+    transcriptionText: 'Had a warm morning tea in the sunny veranda. Heard the koel bird singing in the mango tree. Ananya showed me her drawing of a rhino.',
+    taggedPeople: ['Ananya (Granddaughter)'],
+    taggedPlaces: ['Home Veranda', 'Mango Tree'],
+    activitiesMentioned: ['Morning tea', 'Bird watching', 'Viewing art'],
+    observedMood: 'CALM',
+    isVerifiedByPatient: true,
+  },
+  {
+    id: 'jour-2',
+    patientId: 'patient-ravi-001',
+    dateStr: '2026-09-18',
+    timestamp: '2026-09-18T17:15:00.000Z',
+    transcriptionText: 'Walked to the lotus pond near the banyan tree with Priyanka. The evening air was fresh and pleasant.',
+    taggedPeople: ['Priyanka Kumar (Daughter)'],
+    taggedPlaces: ['Lotus Pond', 'Banyan Tree'],
+    activitiesMentioned: ['Walking', 'Fresh air stroll'],
+    observedMood: 'HAPPY',
+    isVerifiedByPatient: true,
+  }
+];
+
+export const INITIAL_MEMORY_CAPSULES: MemoryCapsule[] = [
+  {
+    id: 'cap-1',
+    patientId: 'patient-ravi-001',
+    senderName: 'Ananya',
+    senderRelation: 'Granddaughter',
+    title: 'Surprise Rhino Drawing for Deuta',
+    occasion: 'Sunday Love Package',
+    unlockDate: '2026-09-20',
+    isUnlocked: true,
+    personalNote: 'Deuta! I made this colorful drawing of the Kaziranga rhino just like the one we saw together. I hope it makes you smile today!',
+    photos: ['https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80'],
+    musicTheme: 'Cheerful Morning Flute',
+    unlockedAt: '2026-09-20T08:00:00.000Z'
+  },
+  {
+    id: 'cap-2',
+    patientId: 'patient-ravi-001',
+    senderName: 'Priyanka & Family',
+    senderRelation: 'Daughter',
+    title: 'Golden Family Reunion & Bihu Memories',
+    occasion: 'Upcoming Autumn Holiday Gift',
+    unlockDate: '2026-10-01',
+    isUnlocked: false,
+    personalNote: 'Special family audio greeting and historic pictures from Tezpur courtyard. To be unlocked on our festival holiday!',
+    photos: ['https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600&auto=format&fit=crop&q=80'],
+    musicTheme: 'Bihu Celebration'
+  }
+];
+
+export const INITIAL_MEMORY_CHAINS: MemoryChain[] = [
+  {
+    id: 'chain-1',
+    patientId: 'patient-ravi-001',
+    memoryId: 'mem-2',
+    chainTitle: 'The Story of the Heritage Bihu Dhol',
+    connectedMemoryIds: ['mem-2', 'mem-1'],
+    questions: [
+      {
+        id: 'q-1',
+        promptKey: 'WHO',
+        promptTitle: 'Who was there with you?',
+        promptText: 'Who played the Dhol rhythm with you in the Tezpur courtyard during Rongali Bihu?',
+        answerText: 'Priyanka danced gracefully while neighbor Bikash joined on the Pepa flute.'
+      },
+      {
+        id: 'q-2',
+        promptKey: 'WHERE',
+        promptTitle: 'Where did this happen?',
+        promptText: 'Where was this joyful festival celebration held?',
+        answerText: 'In our Tezpur ancestral home courtyard under the open sky.'
+      },
+      {
+        id: 'q-3',
+        promptKey: 'WHEN',
+        promptTitle: 'What time of year was it?',
+        promptText: 'In which season or month did the Bihu drum echo across the village?',
+        answerText: 'Mid-April during the Bohag Bihu spring harvest.'
+      },
+      {
+        id: 'q-4',
+        promptKey: 'WHAT',
+        promptTitle: 'What special treat was enjoyed?',
+        promptText: 'What traditional treats did you taste together after playing the music?',
+        answerText: 'Warm sweet Pitha and coconut Laru made with fresh jaggery.'
+      },
+      {
+        id: 'q-5',
+        promptKey: 'FEELING',
+        promptTitle: 'How did it feel in your heart?',
+        promptText: 'How did you feel hearing the drumbeats with all your family gathered close?',
+        answerText: 'Deep happiness, pride in our heritage, and total peace.'
+      }
+    ],
+    completedAt: '2026-09-18T16:00:00.000Z'
+  }
+];
+
+export const INITIAL_USER_PREFERENCES: UserPreferenceProfile = {
+  patientId: 'patient-ravi-001',
+  likedThemes: ['Assam Bihu Music', 'Tea Plantation Gardens', 'Lotus Ponds', 'Wildlife at Kaziranga'],
+  dislikedStimuli: ['Loud sirens', 'Harsh flashing lights', 'Crowded noise'],
+  favoritePeopleIds: ['node-ananya', 'node-priyanka'],
+  favoriteSoundscapes: ['snd-1', 'snd-3', 'snd-4'],
+  preferredActivityDurationMinutes: 8,
+  autoEveningMode: true,
+  eveningDuskHour: 18,
+  lastUpdated: '2026-09-19T12:00:00.000Z'
+};
+
+export const INITIAL_CONFIDENCE_MAP: MemoryConfidenceMap = {
+  patientId: 'patient-ravi-001',
+  lastUpdated: '2026-09-19T18:00:00.000Z',
+  domains: [
+    {
+      domain: 'Close Kinship & Family',
+      categoryKey: 'FAMILY',
+      score: 92,
+      familiarityRating: 5,
+      interactionCount: 48,
+      trend: 'STEADY',
+      lastInteractedAt: '2026-09-19T19:30:00.000Z'
+    },
+    {
+      domain: 'Ancestral Places & Hometown',
+      categoryKey: 'OLD_PLACES',
+      score: 86,
+      familiarityRating: 4,
+      interactionCount: 36,
+      trend: 'STEADY',
+      lastInteractedAt: '2026-09-19T17:00:00.000Z'
+    },
+    {
+      domain: 'Traditional Music & Instruments',
+      categoryKey: 'MUSIC',
+      score: 95,
+      familiarityRating: 5,
+      interactionCount: 62,
+      trend: 'RISING',
+      lastInteractedAt: '2026-09-19T18:15:00.000Z'
+    },
+    {
+      domain: 'Daily Tea & Hydration Routines',
+      categoryKey: 'ROUTINES',
+      score: 90,
+      familiarityRating: 5,
+      interactionCount: 54,
+      trend: 'STEADY',
+      lastInteractedAt: '2026-09-19T08:00:00.000Z'
+    },
+    {
+      domain: 'Recent Calendar Dates & Schedules',
+      categoryKey: 'EVENTS',
+      score: 68,
+      familiarityRating: 3,
+      interactionCount: 22,
+      trend: 'STEADY',
+      lastInteractedAt: '2026-09-18T14:00:00.000Z'
+    }
+  ]
+};
+
 class LocalStorageEngine {
+  private memoryStorage: Record<string, string> = {};
+
   private isBrowser(): boolean {
     return typeof window !== 'undefined';
+  }
+
+  public getStorageItem(key: string): string | null {
+    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+      return localStorage.getItem(key);
+    }
+    return this.memoryStorage[key] || null;
+  }
+
+  public setStorageItem(key: string, value: string): void {
+    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+      localStorage.setItem(key, value);
+    } else {
+      this.memoryStorage[key] = value;
+    }
+  }
+
+  // Automatic Migration & Fallback Engine
+  public getItemWithFallback(key: string): string | null {
+    if (!this.isBrowser()) return null;
+    const val = localStorage.getItem(key);
+    if (val !== null) return val;
+    // Check legacy 'manas_' key if new 'mind_mithra_' key is not yet set
+    const legacyKey = key.replace('mind_mithra_', 'manas_');
+    if (legacyKey !== key) {
+      const legacyVal = localStorage.getItem(legacyKey);
+      if (legacyVal !== null) {
+        localStorage.setItem(key, legacyVal);
+        return legacyVal;
+      }
+    }
+    return null;
   }
 
   // Network State Simulation for Offline-First Demonstrations
@@ -1083,6 +1595,39 @@ class LocalStorageEngine {
 
   public addGameSession(session: GameSessionResult): void {
     this.saveGameSession(session);
+  }
+
+  public saveGameVoiceEvent(evt: GameVoiceEvent): void {
+    const events = this.getGameVoiceEvents();
+    events.unshift(evt);
+    if (this.isBrowser()) {
+      localStorage.setItem(STORAGE_KEYS.GAME_VOICE_EVENTS, JSON.stringify(events.slice(0, 100)));
+    }
+    this.addCareObservationEvent({
+      id: `care-obs-voice-${evt.id}`,
+      patientId: evt.patientId,
+      timestamp: evt.timestamp,
+      source: 'VOICE_EVENT',
+      data: {
+        gameId: evt.gameId,
+        transcript: evt.transcript,
+        intent: evt.intent,
+        correct: evt.correct,
+        responseTimeSeconds: evt.responseTimeSeconds,
+      },
+    });
+  }
+
+  public getGameVoiceEvents(patientId?: string): GameVoiceEvent[] {
+    if (!this.isBrowser()) return [];
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.GAME_VOICE_EVENTS);
+      if (!data) return [];
+      const all: GameVoiceEvent[] = JSON.parse(data);
+      return patientId ? all.filter(e => e.patientId === patientId) : all;
+    } catch {
+      return [];
+    }
   }
 
   // Memories
@@ -1642,6 +2187,482 @@ class LocalStorageEngine {
     };
   }
 
+  // Memory Graph (Feature 2: Memory Web)
+  public getMemoryGraph(patientId?: string): MemoryGraphData {
+    if (!this.isBrowser()) {
+      return { nodes: INITIAL_MEMORY_GRAPH_NODES, edges: INITIAL_MEMORY_GRAPH_EDGES };
+    }
+    const pid = patientId || this.getActivePatientId();
+    let nodes: MemoryGraphNode[] = [];
+    let edges: MemoryGraphEdge[] = [];
+
+    const nodesData = this.getItemWithFallback(STORAGE_KEYS.MEMORY_GRAPH_NODES);
+    if (!nodesData) {
+      nodes = INITIAL_MEMORY_GRAPH_NODES;
+      this.saveMemoryGraphNodes(nodes);
+    } else {
+      try { nodes = JSON.parse(nodesData); } catch { nodes = INITIAL_MEMORY_GRAPH_NODES; }
+    }
+
+    const edgesData = this.getItemWithFallback(STORAGE_KEYS.MEMORY_GRAPH_EDGES);
+    if (!edgesData) {
+      edges = INITIAL_MEMORY_GRAPH_EDGES;
+      this.saveMemoryGraphEdges(edges);
+    } else {
+      try { edges = JSON.parse(edgesData); } catch { edges = INITIAL_MEMORY_GRAPH_EDGES; }
+    }
+
+    const filteredNodes = pid ? nodes.filter(n => !n.patientId || n.patientId === pid) : nodes;
+    const nodeIds = new Set(filteredNodes.map(n => n.id));
+    const filteredEdges = edges.filter(e => nodeIds.has(e.source) && nodeIds.has(e.target));
+
+    return { nodes: filteredNodes, edges: filteredEdges };
+  }
+
+  public saveMemoryGraphNodes(nodes: MemoryGraphNode[]): void {
+    if (!this.isBrowser()) return;
+    localStorage.setItem(STORAGE_KEYS.MEMORY_GRAPH_NODES, JSON.stringify(nodes));
+  }
+
+  public saveMemoryGraphEdges(edges: MemoryGraphEdge[]): void {
+    if (!this.isBrowser()) return;
+    localStorage.setItem(STORAGE_KEYS.MEMORY_GRAPH_EDGES, JSON.stringify(edges));
+  }
+
+  public addMemoryGraphNode(node: MemoryGraphNode): void {
+    const graph = this.getMemoryGraph();
+    const existing = graph.nodes.findIndex(n => n.id === node.id);
+    if (existing >= 0) {
+      graph.nodes[existing] = node;
+    } else {
+      graph.nodes.push(node);
+    }
+    this.saveMemoryGraphNodes(graph.nodes);
+    this.enqueueEvent('MEMORY_CREATED', { nodeId: node.id, label: node.title }, node.patientId);
+  }
+
+  public addMemoryGraphEdge(edge: MemoryGraphEdge): void {
+    const graph = this.getMemoryGraph();
+    const existing = graph.edges.findIndex(e => e.id === edge.id);
+    if (existing >= 0) {
+      graph.edges[existing] = edge;
+    } else {
+      graph.edges.push(edge);
+    }
+    this.saveMemoryGraphEdges(graph.edges);
+  }
+
+  // Elder Knowledge Archive (Features 3 & 21: Teach Mind Mithra & Teach My Family)
+  public getElderKnowledge(patientId?: string): ElderKnowledgeItem[] {
+    if (!this.isBrowser()) return INITIAL_ELDER_KNOWLEDGE;
+    const data = this.getItemWithFallback(STORAGE_KEYS.ELDER_KNOWLEDGE);
+    if (!data) {
+      this.saveElderKnowledge(INITIAL_ELDER_KNOWLEDGE);
+      return patientId ? INITIAL_ELDER_KNOWLEDGE.filter(k => k.patientId === patientId) : INITIAL_ELDER_KNOWLEDGE;
+    }
+    try {
+      const list: ElderKnowledgeItem[] = JSON.parse(data);
+      return patientId ? list.filter(k => k.patientId === patientId) : list;
+    } catch {
+      return INITIAL_ELDER_KNOWLEDGE;
+    }
+  }
+
+  public saveElderKnowledge(items: ElderKnowledgeItem[]): void {
+    if (!this.isBrowser()) return;
+    localStorage.setItem(STORAGE_KEYS.ELDER_KNOWLEDGE, JSON.stringify(items));
+  }
+
+  public addElderKnowledge(item: ElderKnowledgeItem): void {
+    const list = this.getElderKnowledge();
+    list.unshift(item);
+    this.saveElderKnowledge(list);
+    this.enqueueEvent('MEMORY_CREATED', { knowledgeTitle: item.title, category: item.category }, item.patientId);
+  }
+
+  // Familiar Route Memories (Feature 4: Familiar Route Recall)
+  public getRouteMemories(patientId?: string): RouteMemory[] {
+    if (!this.isBrowser()) return INITIAL_ROUTE_MEMORIES;
+    const data = this.getItemWithFallback(STORAGE_KEYS.ROUTE_MEMORIES);
+    if (!data) {
+      this.saveRouteMemories(INITIAL_ROUTE_MEMORIES);
+      return patientId ? INITIAL_ROUTE_MEMORIES.filter(r => r.patientId === patientId) : INITIAL_ROUTE_MEMORIES;
+    }
+    try {
+      const list: RouteMemory[] = JSON.parse(data);
+      return patientId ? list.filter(r => r.patientId === patientId) : list;
+    } catch {
+      return INITIAL_ROUTE_MEMORIES;
+    }
+  }
+
+  public saveRouteMemories(routes: RouteMemory[]): void {
+    if (!this.isBrowser()) return;
+    localStorage.setItem(STORAGE_KEYS.ROUTE_MEMORIES, JSON.stringify(routes));
+  }
+
+  public addRouteMemory(route: RouteMemory): void {
+    const list = this.getRouteMemories();
+    list.unshift(route);
+    this.saveRouteMemories(list);
+  }
+
+  // Personal Soundscape Items (Feature 6: My Sounds)
+  public getPersonalSounds(patientId?: string): PersonalSoundItem[] {
+    if (!this.isBrowser()) return INITIAL_PERSONAL_SOUNDS;
+    const data = this.getItemWithFallback(STORAGE_KEYS.PERSONAL_SOUNDS);
+    if (!data) {
+      this.savePersonalSounds(INITIAL_PERSONAL_SOUNDS);
+      return patientId ? INITIAL_PERSONAL_SOUNDS.filter(s => s.patientId === patientId) : INITIAL_PERSONAL_SOUNDS;
+    }
+    try {
+      const list: PersonalSoundItem[] = JSON.parse(data);
+      return patientId ? list.filter(s => s.patientId === patientId) : list;
+    } catch {
+      return INITIAL_PERSONAL_SOUNDS;
+    }
+  }
+
+  public savePersonalSounds(sounds: PersonalSoundItem[]): void {
+    if (!this.isBrowser()) return;
+    localStorage.setItem(STORAGE_KEYS.PERSONAL_SOUNDS, JSON.stringify(sounds));
+  }
+
+  public addPersonalSound(sound: PersonalSoundItem): void {
+    const list = this.getPersonalSounds();
+    list.unshift(sound);
+    this.savePersonalSounds(list);
+  }
+
+  // Daily Journal (Feature 7: Tell Me About Your Day)
+  public getDailyJournals(patientId?: string): DailyJournalEntry[] {
+    if (!this.isBrowser()) return INITIAL_DAILY_JOURNAL;
+    const data = this.getItemWithFallback(STORAGE_KEYS.DAILY_JOURNALS);
+    if (!data) {
+      this.saveDailyJournals(INITIAL_DAILY_JOURNAL);
+      return patientId ? INITIAL_DAILY_JOURNAL.filter(j => j.patientId === patientId) : INITIAL_DAILY_JOURNAL;
+    }
+    try {
+      const list: DailyJournalEntry[] = JSON.parse(data);
+      return patientId ? list.filter(j => j.patientId === patientId) : list;
+    } catch {
+      return INITIAL_DAILY_JOURNAL;
+    }
+  }
+
+  public saveDailyJournals(entries: DailyJournalEntry[]): void {
+    if (!this.isBrowser()) return;
+    localStorage.setItem(STORAGE_KEYS.DAILY_JOURNALS, JSON.stringify(entries));
+  }
+
+  public addDailyJournal(entry: DailyJournalEntry): void {
+    const list = this.getDailyJournals();
+    list.unshift(entry);
+    this.saveDailyJournals(list);
+    this.enqueueEvent('MEMORY_CREATED', { journalId: entry.id, date: entry.dateStr }, entry.patientId);
+  }
+
+  public deleteDailyJournal(id: string): void {
+    const list = this.getDailyJournals().filter(j => j.id !== id);
+    this.saveDailyJournals(list);
+  }
+
+  // Memory Capsules (Feature 15: Memory Capsules)
+  public getMemoryCapsules(patientId?: string): MemoryCapsule[] {
+    if (!this.isBrowser()) return INITIAL_MEMORY_CAPSULES;
+    const data = this.getItemWithFallback(STORAGE_KEYS.MEMORY_CAPSULES);
+    if (!data) {
+      this.saveMemoryCapsules(INITIAL_MEMORY_CAPSULES);
+      return patientId ? INITIAL_MEMORY_CAPSULES.filter(c => c.patientId === patientId) : INITIAL_MEMORY_CAPSULES;
+    }
+    try {
+      const list: MemoryCapsule[] = JSON.parse(data);
+      return patientId ? list.filter(c => c.patientId === patientId) : list;
+    } catch {
+      return INITIAL_MEMORY_CAPSULES;
+    }
+  }
+
+  public saveMemoryCapsules(capsules: MemoryCapsule[]): void {
+    if (!this.isBrowser()) return;
+    localStorage.setItem(STORAGE_KEYS.MEMORY_CAPSULES, JSON.stringify(capsules));
+  }
+
+  public addMemoryCapsule(capsule: MemoryCapsule): void {
+    const list = this.getMemoryCapsules();
+    list.unshift(capsule);
+    this.saveMemoryCapsules(list);
+  }
+
+  public unlockMemoryCapsule(id: string): void {
+    const list = this.getMemoryCapsules();
+    const cap = list.find(c => c.id === id);
+    if (cap) {
+      cap.isUnlocked = true;
+      cap.unlockedAt = new Date().toISOString();
+      this.saveMemoryCapsules(list);
+    }
+  }
+
+  // Memory Chains (Feature 16: Memory Chain)
+  public getMemoryChains(patientId?: string): MemoryChain[] {
+    if (!this.isBrowser()) return INITIAL_MEMORY_CHAINS;
+    const data = this.getItemWithFallback(STORAGE_KEYS.MEMORY_CHAINS);
+    if (!data) {
+      this.saveMemoryChains(INITIAL_MEMORY_CHAINS);
+      return patientId ? INITIAL_MEMORY_CHAINS.filter(c => c.patientId === patientId) : INITIAL_MEMORY_CHAINS;
+    }
+    try {
+      const list: MemoryChain[] = JSON.parse(data);
+      return patientId ? list.filter(c => c.patientId === patientId) : list;
+    } catch {
+      return INITIAL_MEMORY_CHAINS;
+    }
+  }
+
+  public saveMemoryChains(chains: MemoryChain[]): void {
+    if (!this.isBrowser()) return;
+    localStorage.setItem(STORAGE_KEYS.MEMORY_CHAINS, JSON.stringify(chains));
+  }
+
+  public addMemoryChain(chain: MemoryChain): void {
+    const list = this.getMemoryChains();
+    list.unshift(chain);
+    this.saveMemoryChains(list);
+  }
+
+  public updateMemoryChainAnswer(chainId: string, questionId: string, answerText: string): void {
+    const chains = this.getMemoryChains();
+    const chain = chains.find(c => c.id === chainId);
+    if (chain) {
+      const q = chain.questions.find(item => item.id === questionId);
+      if (q) {
+        q.answerText = answerText;
+      }
+      this.saveMemoryChains(chains);
+    }
+  }
+
+  // Memory Confidence Map (Feature 12: Memory Confidence Map)
+  public getConfidenceMap(patientId?: string): MemoryConfidenceMap {
+    const pid = patientId || this.getActivePatientId();
+    if (!this.isBrowser()) return { ...INITIAL_CONFIDENCE_MAP, patientId: pid };
+    const data = this.getItemWithFallback(STORAGE_KEYS.CONFIDENCE_MAPS);
+    if (!data) {
+      const initial = { ...INITIAL_CONFIDENCE_MAP, patientId: pid };
+      this.saveConfidenceMap(initial);
+      return initial;
+    }
+    try {
+      const map: Record<string, MemoryConfidenceMap> = JSON.parse(data);
+      if (map[pid]) return map[pid];
+      const initial = { ...INITIAL_CONFIDENCE_MAP, patientId: pid };
+      map[pid] = initial;
+      this.saveConfidenceMap(initial);
+      return initial;
+    } catch {
+      return { ...INITIAL_CONFIDENCE_MAP, patientId: pid };
+    }
+  }
+
+  public saveConfidenceMap(map: MemoryConfidenceMap): void {
+    if (!this.isBrowser()) return;
+    let maps: Record<string, MemoryConfidenceMap> = {};
+    const data = this.getItemWithFallback(STORAGE_KEYS.CONFIDENCE_MAPS);
+    if (data) {
+      try { maps = JSON.parse(data); } catch { maps = {}; }
+    }
+    maps[map.patientId] = map;
+    localStorage.setItem(STORAGE_KEYS.CONFIDENCE_MAPS, JSON.stringify(maps));
+  }
+
+  public updateDomainScore(patientId: string, domain: string, scoreDelta: number): void {
+    const map = this.getConfidenceMap(patientId);
+    const item = map.domains.find(d => d.domain.toLowerCase() === domain.toLowerCase() || d.categoryKey.toLowerCase() === domain.toLowerCase());
+    if (item) {
+      item.score = Math.max(10, Math.min(100, item.score + scoreDelta));
+      item.interactionCount += 1;
+      item.lastInteractedAt = new Date().toISOString();
+      if (scoreDelta > 0) item.trend = 'RISING';
+      else if (scoreDelta < 0) item.trend = 'DECLINING';
+      this.saveConfidenceMap(map);
+    }
+  }
+
+  // User Emotional Preference Profile (Feature 19: Emotional Preference Memory)
+  public getUserPreferences(patientId?: string): UserPreferenceProfile {
+    const pid = patientId || this.getActivePatientId();
+    if (!this.isBrowser()) return { ...INITIAL_USER_PREFERENCES, patientId: pid };
+    const data = this.getItemWithFallback(STORAGE_KEYS.USER_PREFERENCES);
+    if (!data) {
+      const initial = { ...INITIAL_USER_PREFERENCES, patientId: pid };
+      this.saveUserPreferences(initial);
+      return initial;
+    }
+    try {
+      const map: Record<string, UserPreferenceProfile> = JSON.parse(data);
+      return map[pid] || { ...INITIAL_USER_PREFERENCES, patientId: pid };
+    } catch {
+      return { ...INITIAL_USER_PREFERENCES, patientId: pid };
+    }
+  }
+
+  public saveUserPreferences(pref: UserPreferenceProfile): void {
+    if (!this.isBrowser()) return;
+    let map: Record<string, UserPreferenceProfile> = {};
+    const data = this.getItemWithFallback(STORAGE_KEYS.USER_PREFERENCES);
+    if (data) {
+      try { map = JSON.parse(data); } catch { map = {}; }
+    }
+    map[pref.patientId] = pref;
+    localStorage.setItem(STORAGE_KEYS.USER_PREFERENCES, JSON.stringify(map));
+  }
+
+  // --- Granular Mood Observations (Explicit User vs Camera Heuristic) ---
+  public getMoodObservations(): MoodObservationRecord[] {
+    const raw = this.getStorageItem(STORAGE_KEYS.MOOD_OBSERVATIONS);
+    if (!raw) return [];
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return [];
+    }
+  }
+
+  public addMoodObservation(
+    obs: Omit<MoodObservationRecord, 'id' | 'timestamp'> & { id?: string; timestamp?: string }
+  ): MoodObservationRecord {
+    const records = this.getMoodObservations();
+    const newRecord: MoodObservationRecord = {
+      id: obs.id || `mood-obs-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+      patientId: obs.patientId || this.getActivePatientId(),
+      timestamp: obs.timestamp || new Date().toISOString(),
+      state: obs.state,
+      confidence: obs.confidence,
+      source: obs.source,
+      context: obs.context,
+      note: obs.note,
+    };
+    records.push(newRecord);
+    // Keep last 200 records
+    const trimmed = records.slice(-200);
+    this.setStorageItem(STORAGE_KEYS.MOOD_OBSERVATIONS, JSON.stringify(trimmed));
+    return newRecord;
+  }
+
+  // --- Caregiver Cognitive Game Level Controls & Overrides ---
+  public getCaregiverGameControls(): CaregiverGameControl[] {
+    const raw = this.getStorageItem(STORAGE_KEYS.CAREGIVER_GAME_CONTROLS);
+    if (!raw) return [];
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return [];
+    }
+  }
+
+  public saveCaregiverGameControls(controls: CaregiverGameControl[]): void {
+    this.setStorageItem(STORAGE_KEYS.CAREGIVER_GAME_CONTROLS, JSON.stringify(controls));
+  }
+
+  public updateCaregiverGameControl(gameId: string, updates: Partial<CaregiverGameControl>): CaregiverGameControl {
+    const controls = this.getCaregiverGameControls();
+    const idx = controls.findIndex(c => c.gameId === gameId);
+    if (idx >= 0) {
+      controls[idx] = {
+        ...controls[idx],
+        ...updates,
+      };
+      this.saveCaregiverGameControls(controls);
+      return controls[idx];
+    } else {
+      const newControl: CaregiverGameControl = {
+        gameId,
+        domain: updates.domain || 'MEMORY',
+        startingLevel: updates.startingLevel || 1,
+        maxAllowedLevel: updates.maxAllowedLevel || 5,
+        isLocked: updates.isLocked ?? false,
+        isPaused: updates.isPaused ?? false,
+        hintsEnabled: updates.hintsEnabled ?? true,
+        notes: updates.notes,
+        ...updates
+      };
+      controls.push(newControl);
+      this.saveCaregiverGameControls(controls);
+      return newControl;
+    }
+  }
+
+  // Biometric Face Enrollment Template Storage (Section 9)
+  public saveEnrolledFace(patientId: string, template: EnrolledFaceTemplate): void {
+    const registry = this.getPatientRegistry();
+    const idx = registry.findIndex((p) => p.id === patientId);
+    if (idx >= 0) {
+      registry[idx].enrolledFace = template;
+      this.savePatientRegistry(registry);
+      if (this.getActivePatientId() === patientId) {
+        this.savePatientProfile(registry[idx]);
+      }
+    }
+    // Also store separately in ENROLLED_FACES
+    try {
+      const stored = this.getStorageItem(STORAGE_KEYS.ENROLLED_FACES);
+      const map: Record<string, EnrolledFaceTemplate> = stored ? JSON.parse(stored) : {};
+      map[patientId] = template;
+      this.setStorageItem(STORAGE_KEYS.ENROLLED_FACES, JSON.stringify(map));
+    } catch {}
+  }
+
+  public getEnrolledFace(patientId: string): EnrolledFaceTemplate | null {
+    try {
+      const stored = this.getStorageItem(STORAGE_KEYS.ENROLLED_FACES);
+      if (stored) {
+        const map: Record<string, EnrolledFaceTemplate> = JSON.parse(stored);
+        if (map[patientId]) return map[patientId];
+      }
+    } catch {}
+
+    const patient = this.getPatientById(patientId);
+    if (patient?.enrolledFace) return patient.enrolledFace;
+
+    // Provide calibrated initial template for primary demo patient (Ravi Kumar)
+    if (patientId === 'patient-ravi-001' || !patientId) {
+      const calibrated = faceRecognitionEngine.generatePrecalibratedTemplate('patient-ravi-001', 'Ravi Kumar');
+      this.saveEnrolledFace('patient-ravi-001', calibrated);
+      return calibrated;
+    }
+    return null;
+  }
+
+  // Unified Care Observation Events (Section 39 & 40)
+  public addCareObservationEvent(event: Omit<CareObservationEvent, 'id' | 'timestamp'> & { id?: string; timestamp?: string }): void {
+    const fullEvent: CareObservationEvent = {
+      id: event.id || `care-event-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      timestamp: event.timestamp || new Date().toISOString(),
+      patientId: event.patientId,
+      source: event.source,
+      data: event.data,
+      confidence: event.confidence,
+    };
+    const events = this.getCareObservationEvents();
+    events.unshift(fullEvent);
+    this.setStorageItem(STORAGE_KEYS.CARE_OBSERVATION_EVENTS, JSON.stringify(events.slice(0, 100)));
+  }
+
+  public getCareObservationEvents(patientId?: string): CareObservationEvent[] {
+    const raw = this.getStorageItem(STORAGE_KEYS.CARE_OBSERVATION_EVENTS);
+    if (!raw) return [];
+    try {
+      const list: CareObservationEvent[] = JSON.parse(raw);
+      if (patientId) {
+        return list.filter((e) => e.patientId === patientId);
+      }
+      return list;
+    } catch {
+      return [];
+    }
+  }
+
   public resetToDemo(): void {
     this.resetToDemoData();
   }
@@ -1660,6 +2681,18 @@ class LocalStorageEngine {
     this.saveCaregiverAlerts(INITIAL_CAREGIVER_ALERTS);
     this.saveFamilyMembers(INITIAL_FAMILY_MEMBERS);
     this.saveMedicalReports(INITIAL_MEDICAL_REPORTS);
+    // Reset MIND MITHRA 21 reference features
+    this.saveMemoryGraphNodes(INITIAL_MEMORY_GRAPH_NODES);
+    this.saveMemoryGraphEdges(INITIAL_MEMORY_GRAPH_EDGES);
+    this.saveElderKnowledge(INITIAL_ELDER_KNOWLEDGE);
+    this.saveRouteMemories(INITIAL_ROUTE_MEMORIES);
+    this.savePersonalSounds(INITIAL_PERSONAL_SOUNDS);
+    this.saveDailyJournals(INITIAL_DAILY_JOURNAL);
+    this.saveMemoryCapsules(INITIAL_MEMORY_CAPSULES);
+    this.saveMemoryChains(INITIAL_MEMORY_CHAINS);
+    this.saveConfidenceMap(INITIAL_CONFIDENCE_MAP);
+    this.saveUserPreferences(INITIAL_USER_PREFERENCES);
+
     localStorage.removeItem(STORAGE_KEYS.MOOD_LOGS);
     localStorage.removeItem(STORAGE_KEYS.SYNC_QUEUE);
     localStorage.removeItem(STORAGE_KEYS.GAME_SESSIONS);

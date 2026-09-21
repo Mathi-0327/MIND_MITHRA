@@ -17,12 +17,14 @@ import {
   Bot,
   Languages,
   CheckCircle2,
-  Send
+  Send,
+  Terminal
 } from 'lucide-react';
 import { audioService, COMPANION_VOICE_PROFILES, VoiceProfile } from '../../lib/audioService';
 import { SupportedLanguage } from '../../types';
 import { SUPPORTED_LANGUAGES, t } from '../../lib/translations';
 import { getTimelineGreeting } from '../../lib/timelineGreeting';
+import { aiOrchestrator, VoiceDiagnosticsInfo } from '../../lib/aiOrchestrator';
 
 interface VoiceAssistantModalProps {
   isOpen: boolean;
@@ -87,6 +89,24 @@ const REGIONAL_PROMPTS: Record<SupportedLanguage, Array<{ text: string; label: s
     { text: 'Start today’s memory activity', label: 'Start memory game', icon: 'brain' },
     { text: 'Play peaceful flute music', label: 'Play flute music', icon: 'music' },
   ],
+  ta: [
+    { text: 'வணக்கம்! இன்று நீங்கள் எப்படி இருக்கிறீர்கள்?', label: 'எப்படி இருக்கிறீர்கள் (How are you)', icon: 'smile' },
+    { text: 'என் குடும்ப நினைவுகளை காட்டுங்கள்', label: 'குடும்ப நினைவுகள் (Memories)', icon: 'heart' },
+    { text: 'இன்றைய மனப்பயிற்சியை தொடங்குங்கள்', label: 'மனப்பயிற்சி (Start Game)', icon: 'brain' },
+    { text: 'அமைதியான புல்லாங்குழல் இசை ஒலிக்கவும்', label: 'புல்லாங்குழல் இசை (Flute Music)', icon: 'music' },
+  ],
+  grt: [
+    { text: 'Da·al i tha maw, angni ripeng?', label: 'I tha em (How are you)', icon: 'smile' },
+    { text: 'Angni nokdangni gisik ra·aniko mesokbo', label: 'Nokdang (Family Memories)', icon: 'heart' },
+    { text: 'Da·alni kal·ako a·bachengbo', label: 'Kal·bo (Start Game)', icon: 'brain' },
+    { text: 'Tom·tomani gitko ringbo', label: 'Git (Peaceful Music)', icon: 'music' },
+  ],
+  trp: [
+    { text: 'Khumpar kaham! Nung bahai tongo?', label: 'Kaham tongo (How are you)', icon: 'smile' },
+    { text: 'Ani nokguni gisik rommuno sakhlidi', label: 'Gisik Rommung (Memories)', icon: 'heart' },
+    { text: 'Tabukni cognitive kalani chengdi', label: 'Kalani (Start Game)', icon: 'brain' },
+    { text: 'Kaphang rwchapmung khwnaridi', label: 'Rwchapmung (Music)', icon: 'music' },
+  ],
 };
 
 const REGIONAL_GREETINGS: Record<SupportedLanguage, string> = {
@@ -97,6 +117,22 @@ const REGIONAL_GREETINGS: Record<SupportedLanguage, string> = {
   kha: 'Khublei! Nga dei u Mind Mithra jong phi. Kumno nga lah ban iarap ia phi mynta?',
   lus: 'Chibai! Mind Mithra i thian ka ni e. Vawiin chu engtin nge ka puih theih ang che?',
   en: 'Hello dear friend! I am Mind Mithra, right here by your side. What would you like to do today?',
+  ta: 'வணக்கம்! நான் உங்கள் மைண்ட் மித்ரா (Mind Mithra) துணைவன். இன்று நாம் என்ன செய்யலாம்?',
+  grt: 'Khublei! Anga na·simangni Mind Mithra ripeng ong·a. Da·al mai dake dakchakna?',
+  trp: 'Khumpar kaham! Ang nini Mind Mithra kok rwngchapgwrwng. Tabuk tamo samung khlaina?',
+};
+
+const VOICE_LOCALE_MAP: Record<SupportedLanguage, string> = {
+  as: 'as-IN',
+  bn: 'bn-IN',
+  hi: 'hi-IN',
+  ta: 'ta-IN',
+  mni: 'hi-IN',
+  kha: 'en-IN',
+  lus: 'en-IN',
+  grt: 'en-IN',
+  trp: 'bn-IN',
+  en: 'en-IN',
 };
 
 export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
@@ -129,6 +165,27 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animFrameRef = useRef<number | null>(null);
   const silenceTimerRef = useRef<number | null>(null);
+
+  // Developer Voice Diagnostics HUD
+  const [showDiagnostics, setShowDiagnostics] = useState<boolean>(false);
+  const [diagnostics, setDiagnostics] = useState<VoiceDiagnosticsInfo | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = aiOrchestrator.onDiagnosticsUpdate((diag) => {
+      setDiagnostics(diag);
+    });
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && (e.key === 'D' || e.key === 'd')) {
+        e.preventDefault();
+        setShowDiagnostics((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      unsubscribe();
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   // Keep ref in sync
   useEffect(() => {
@@ -197,7 +254,10 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
       () => {
         setTurnState('IDLE');
       },
-      { voice: selectedVoiceProfile.geminiVoice }
+      {
+        voice: selectedVoiceProfile.geminiVoice,
+        langCode: VOICE_LOCALE_MAP[activeLang] || 'en-IN',
+      }
     );
 
     return () => {
@@ -283,18 +343,21 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
     audioService.speak(
       personalized,
       () => setTurnState('IDLE'),
-      { voice: selectedVoiceProfile.geminiVoice }
+      {
+        voice: selectedVoiceProfile.geminiVoice,
+        langCode: VOICE_LOCALE_MAP[lang] || 'en-IN',
+      }
     );
   };
 
   // Turn 1: START LISTENING
-  const handleStartListening = async () => {
+  const handleStartListening = () => {
     audioService.stopSpeaking();
     setTranscript('');
     transcriptRef.current = '';
 
-    // Start mic audio level visualizer
-    await startAudioMeter();
+    // Start mic audio level visualizer non-blockingly so recognition is never stalled
+    startAudioMeter().catch(() => {});
 
     const SpeechRecognition = (window as unknown as { SpeechRecognition?: any; webkitSpeechRecognition?: any }).SpeechRecognition 
       || (window as unknown as { webkitSpeechRecognition?: any }).webkitSpeechRecognition;
@@ -321,18 +384,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
       const recognition = new SpeechRecognition();
       recognitionRef.current = recognition;
 
-      // Locale mapping
-      const localeMap: Record<SupportedLanguage, string> = {
-        as: 'as-IN',
-        bn: 'bn-IN',
-        hi: 'hi-IN',
-        mni: 'hi-IN',
-        kha: 'en-IN',
-        lus: 'en-IN',
-        en: 'en-IN',
-      };
-
-      recognition.lang = localeMap[activeLang] || 'en-IN';
+      recognition.lang = VOICE_LOCALE_MAP[activeLang] || 'en-IN';
       recognition.continuous = true;
       recognition.interimResults = true;
 
@@ -348,7 +400,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
         transcriptRef.current = text;
         setTranscript(text);
 
-        // Auto-detect end of phrase/speech with 1.4s debounce of silence
+        // Auto-detect end of phrase/speech with 2.4s debounce of silence for elderly accommodation
         if (silenceTimerRef.current) {
           window.clearTimeout(silenceTimerRef.current);
         }
@@ -357,15 +409,14 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
             if (turnStateRef.current === 'LISTENING') {
               handleCompleteSpeechAndProcess(text);
             }
-          }, 1400);
+          }, 2400);
         }
       };
 
       recognition.onerror = (err: any) => {
         console.warn('Speech recognition warning/error:', err?.error || err);
-        // If aborted or no-speech, don't crash, keep listening or transition gracefully
-        if (err?.error === 'not-allowed') {
-          setAssistantReply('Please allow microphone access to talk directly, or tap any prompt below.');
+        if (err?.error === 'not-allowed' || err?.error === 'service-not-allowed') {
+          setAssistantReply('Please allow microphone access in your browser to speak directly, or tap any prompt below.');
           setTurnState('IDLE');
           cleanupAudioStream();
         }
@@ -429,56 +480,14 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
     setTurnState('PROCESSING');
     audioService.playFeedbackSound('GENTLE_TAP');
 
-    // Check offline intent first
-    const offlineParsed = audioService.parseOfflineIntent(inputText);
-
-    if (networkState === 'OFFLINE' || !navigator.onLine) {
-      const reply = offlineParsed.responseVoiceText;
-      setAssistantReply(reply);
-      setLastAudioBase64(null);
-
-      const companionMsg: ChatMessage = {
-        id: `comp-${Date.now()}`,
-        sender: 'companion',
-        text: reply,
-        language: activeLang,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      };
-      setChatHistory((prev) => [...prev, companionMsg]);
-
-      setTurnState('SPEAKING');
-      audioService.speak(
-        reply,
-        () => {
-          setTurnState('IDLE');
-          if (offlineParsed.actionRoute && offlineParsed.actionRoute !== 'HOME') {
-            setTimeout(() => {
-              onNavigate(offlineParsed.actionRoute as any);
-              onClose();
-            }, 800);
-          }
-        },
-        { fallbackOnly: true }
-      );
-      return;
-    }
-
-    // Call Cloud AI Server with strict turn context & chosen language
     try {
-      const res = await fetch('/api/ai/companion-chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: inputText,
-          patientName,
-          language: activeLang,
-          voice: selectedVoiceProfile.geminiVoice,
-        }),
+      const result = await aiOrchestrator.processUserInput(inputText, {
+        currentScreen: 'VOICE_ASSISTANT',
+        voiceName: selectedVoiceProfile.geminiVoice,
       });
 
-      const data = await res.json();
-      const reply = data.reply || offlineParsed.responseVoiceText;
-      const audioBase64 = data.audioBase64 || null;
+      const reply = result.replyText;
+      const audioBase64 = result.audioBase64 || null;
 
       setAssistantReply(reply);
       setLastAudioBase64(audioBase64);
@@ -499,21 +508,25 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
         reply,
         () => {
           setTurnState('IDLE');
-          if (offlineParsed.actionRoute && offlineParsed.actionRoute !== 'HOME') {
+          if (result.action && result.action.targetRoute && result.action.targetRoute !== 'HOME') {
             setTimeout(() => {
-              onNavigate(offlineParsed.actionRoute as any);
+              onNavigate(result.action!.targetRoute as any);
               onClose();
-            }, 800);
+            }, 900);
+          } else if (result.action?.type === 'PLAY_SOUNDSCAPE') {
+            const snd = (result.intentResult.entities.soundscapeType as any) || 'RAIN';
+            audioService.playSoundscape(snd);
           }
         },
         {
           voice: selectedVoiceProfile.geminiVoice,
           base64Audio: audioBase64,
+          langCode: VOICE_LOCALE_MAP[activeLang] || 'en-IN',
         }
       );
     } catch (err) {
-      console.error('Error fetching companion chat:', err);
-      const fallbackReply = offlineParsed.responseVoiceText;
+      console.error('Error in aiOrchestrator voice processing:', err);
+      const fallbackReply = `I am right here with you, dear ${patientName}. Take all the time you need.`;
       setAssistantReply(fallbackReply);
       setLastAudioBase64(null);
 
@@ -530,7 +543,10 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
       audioService.speak(
         fallbackReply,
         () => setTurnState('IDLE'),
-        { voice: selectedVoiceProfile.geminiVoice }
+        {
+          voice: selectedVoiceProfile.geminiVoice,
+          langCode: VOICE_LOCALE_MAP[activeLang] || 'en-IN',
+        }
       );
     }
   };
@@ -547,6 +563,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
       {
         voice: selectedVoiceProfile.geminiVoice,
         base64Audio: audioBase64 || lastAudioBase64,
+        langCode: VOICE_LOCALE_MAP[activeLang] || 'en-IN',
       }
     );
   };
@@ -568,34 +585,114 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
         {/* Top Header */}
         <div className="flex items-center justify-between border-b border-amber-100 pb-3 mb-3">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-md">
-              <MessageCircleHeart className="w-6 h-6 animate-pulse" />
+            <div className="w-11 h-11 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center text-xl shadow-xs">
+              🌸
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg sm:text-xl font-black text-stone-900 font-serif">
-                  Mind Mithra Voice Companion
+                  Talk to Me
                 </h2>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] sm:text-xs font-bold">
-                  <Sparkles className="w-3 h-3 text-emerald-600" />
-                  AI Voice
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[11px] font-bold">
+                  I'm listening
                 </span>
               </div>
               <p className="text-xs text-stone-500">
-                Speaking with {patientName} • Multilingual Voice Assistant
+                Speaking with {patientName}
               </p>
             </div>
           </div>
 
-          {/* Close Button */}
-          <button
-            onClick={onClose}
-            className="w-9 h-9 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-700 flex items-center justify-center transition-colors shadow-xs cursor-pointer"
-            aria-label="Close voice companion"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          {/* Action Buttons */}
+          <div className="flex items-center gap-1.5">
+            {/* Close Button */}
+            <button
+              onClick={onClose}
+              className="w-10 h-10 rounded-2xl bg-stone-100 hover:bg-stone-200 text-stone-700 flex items-center justify-center transition-colors shadow-xs cursor-pointer"
+              aria-label="Close voice companion"
+            >
+              <X className="w-5 h-5 stroke-[2.5]" />
+            </button>
+          </div>
         </div>
+
+        {/* Developer Voice Diagnostics HUD Panel */}
+        {showDiagnostics && (
+          <div className="mb-3 p-3 bg-stone-950 text-stone-100 rounded-2xl text-xs font-mono border-2 border-amber-500/40 shadow-xl overflow-y-auto max-h-56 animate-in slide-in-from-top-2">
+            <div className="flex items-center justify-between border-b border-stone-800 pb-2 mb-2">
+              <div className="flex items-center gap-2">
+                <Terminal className="w-4 h-4 text-amber-400 animate-pulse" />
+                <span className="font-bold text-amber-400 text-xs tracking-wide">VOICE DIAGNOSTICS HUD</span>
+                <span className="text-[10px] text-stone-400 bg-stone-900 px-1.5 py-0.5 rounded border border-stone-800">Ctrl+Shift+D</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                  diagnostics?.provider?.startsWith('gemini') 
+                    ? 'bg-emerald-950 text-emerald-300 border border-emerald-700' 
+                    : 'bg-amber-950 text-amber-300 border border-amber-700'
+                }`}>
+                  {diagnostics?.provider || 'STANDBY'}
+                </span>
+                <span className="text-amber-400 font-bold text-[10px]">
+                  {diagnostics?.latencyMs ? `${diagnostics.latencyMs} ms` : '—'}
+                </span>
+              </div>
+            </div>
+
+            {diagnostics ? (
+              <div className="space-y-2 text-[11px]">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div className="bg-stone-900/80 p-2 rounded-lg border border-stone-800">
+                    <span className="text-stone-400 text-[10px] uppercase font-bold tracking-wider">Raw Audio Transcript:</span>
+                    <p className="text-stone-200 mt-0.5 font-medium">{diagnostics.rawTranscript || '—'}</p>
+                  </div>
+                  <div className="bg-stone-900/80 p-2 rounded-lg border border-stone-800">
+                    <span className="text-amber-400 text-[10px] uppercase font-bold tracking-wider">Resolved Anaphora:</span>
+                    <p className="text-amber-200 mt-0.5 font-medium">{diagnostics.resolvedTranscript || '—'}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div className="bg-stone-900/80 p-2 rounded-lg border border-stone-800">
+                    <span className="text-stone-400 text-[10px] uppercase font-bold tracking-wider">Intent:</span>
+                    <p className="text-emerald-400 font-bold mt-0.5">{diagnostics.intent}</p>
+                  </div>
+                  <div className="bg-stone-900/80 p-2 rounded-lg border border-stone-800">
+                    <span className="text-stone-400 text-[10px] uppercase font-bold tracking-wider">Confidence:</span>
+                    <p className="text-stone-200 font-bold mt-0.5">{Math.round(diagnostics.confidence * 100)}%</p>
+                  </div>
+                  <div className="bg-stone-900/80 p-2 rounded-lg border border-stone-800">
+                    <span className="text-stone-400 text-[10px] uppercase font-bold tracking-wider">Action Triggered:</span>
+                    <p className="text-sky-300 font-medium mt-0.5 truncate">{diagnostics.actionTriggered || 'NONE (Empathetic Conversation)'}</p>
+                  </div>
+                </div>
+
+                {Object.keys(diagnostics.entities || {}).length > 0 && (
+                  <div className="bg-stone-900/80 p-2 rounded-lg border border-stone-800">
+                    <span className="text-stone-400 text-[10px] uppercase font-bold tracking-wider">Extracted Entities:</span>
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {Object.entries(diagnostics.entities).map(([k, v]) => (
+                        <span key={k} className="px-1.5 py-0.5 rounded bg-stone-800 text-amber-300 text-[10px] border border-stone-700">
+                          {k}: <strong>{String(v)}</strong>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between text-[10px] text-stone-400 border-t border-stone-800/80 pt-1.5">
+                  <span>Context: {diagnostics.contextInjected.patientName} ({diagnostics.contextInjected.historyTurns} turns)</span>
+                  <span>Audio State: <strong className="text-amber-400">{turnState}</strong></span>
+                  <span>Language: {diagnostics.detectedLanguage}</span>
+                </div>
+              </div>
+            ) : (
+              <p className="text-stone-500 italic py-2 text-center">
+                Diagnostics ready. Speak into the microphone or submit a query to view telemetry.
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Multilingual Dialect Switcher Strip */}
         <div className="bg-amber-50/80 border border-amber-200 rounded-2xl p-2 mb-3 flex items-center justify-between gap-2 overflow-x-auto">
@@ -674,7 +771,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
           {turnState === 'PROCESSING' && (
             <div className="flex items-center gap-2 p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 font-bold text-xs animate-pulse">
               <Sparkles className="w-4 h-4 text-amber-600" />
-              <span>Thinking warmly for you...</span>
+              <span>Let me think...</span>
             </div>
           )}
 
@@ -684,7 +781,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
                 <div className="flex items-center gap-2 overflow-hidden">
                   <Mic className="w-4 h-4 text-rose-600 animate-bounce shrink-0" />
                   <span className="truncate">
-                    {transcript || 'Listening carefully... speak now.'}
+                    {transcript || "I'm listening... speak now."}
                   </span>
                 </div>
 

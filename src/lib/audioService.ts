@@ -12,6 +12,12 @@ export type VoiceIntent =
   | 'CHECK_REMINDERS'
   | 'ACKNOWLEDGE_MEDICINE'
   | 'PLAY_MUSIC'
+  | 'PLAY_FAMILY_VOICE'
+  | 'OPEN_FAMILY_TREE'
+  | 'CALL_FAMILY'
+  | 'TRIGGER_SOS'
+  | 'OPEN_JOURNAL'
+  | 'OPEN_SOUNDSCAPES'
   | 'GO_HOME'
   | 'ASK_STATUS'
   | 'UNKNOWN';
@@ -21,7 +27,7 @@ export interface ParsedVoiceCommand {
   confidence: number;
   extractedQuery?: string;
   responseVoiceText: string;
-  actionRoute?: 'HOME' | 'GAMES' | 'MEMORIES' | 'REMINDERS' | 'RELAX' | 'BASELINE';
+  actionRoute?: 'HOME' | 'GAMES' | 'MEMORIES' | 'REMINDERS' | 'RELAX' | 'BASELINE' | 'FAMILY_TREE' | 'RADIO' | 'JOURNAL';
 }
 
 export interface VoiceProfile {
@@ -63,9 +69,13 @@ class AudioService {
   private currentVoiceProfile: VoiceProfile = COMPANION_VOICE_PROFILES[0];
   private availableVoices: SpeechSynthesisVoice[] = [];
   private isSpeakingNow: boolean = false;
+  private activeUtterance: SpeechSynthesisUtterance | null = null;
+  private serverTtsAvailable: boolean | null = null;
+  private speechWatchdogTimer: any = null;
   private activeSirenOscillators: OscillatorNode[] = [];
   private activeSirenGain: GainNode | null = null;
   private sirenTimer: number | null = null;
+  private soundscapeNodes: { osc: OscillatorNode; gain: GainNode }[] = [];
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -76,7 +86,29 @@ class AudioService {
           this.synth.onvoiceschanged = () => this.loadBrowserVoices();
         }
       }
+      this.warmupAudioOnUserGesture();
     }
+  }
+
+  // Modern browsers require a user gesture to resume AudioContext and ensure SpeechSynthesis is active
+  private warmupAudioOnUserGesture(): void {
+    if (typeof window === 'undefined') return;
+    const unlock = () => {
+      try {
+        if (this.synth && this.synth.paused) {
+          this.synth.resume();
+        }
+        if (this.audioCtx && this.audioCtx.state === 'suspended') {
+          this.audioCtx.resume().catch(() => {});
+        }
+      } catch {}
+      window.removeEventListener('click', unlock, true);
+      window.removeEventListener('touchstart', unlock, true);
+      window.removeEventListener('keydown', unlock, true);
+    };
+    window.addEventListener('click', unlock, true);
+    window.addEventListener('touchstart', unlock, true);
+    window.addEventListener('keydown', unlock, true);
   }
 
   private loadBrowserVoices(): void {
@@ -251,6 +283,102 @@ class AudioService {
     }
   }
 
+  // Play gentle affirmative chime for elderly cognitive reinforcement
+  public playChime(freq = 660): void {
+    try {
+      const ctx = this.getAudioContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now);
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.exponentialRampToValueAtTime(0.18, now + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.8);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.8);
+    } catch {
+      // Ignore
+    }
+  }
+
+  // Procedural soothing soundscapes for dusk sundowning relief and relaxation
+  public playSoundscape(type: 'RAIN' | 'FLUTE' | 'BIRDS'): void {
+    try {
+      this.stopSoundscape();
+      const ctx = this.getAudioContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+
+      if (type === 'FLUTE') {
+        // Indian bamboo flute gentle harmonic chord (A4 440Hz + E5 660Hz)
+        [440, 660].forEach(freq => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now);
+          gain.gain.setValueAtTime(0.001, now);
+          gain.gain.linearRampToValueAtTime(0.06, now + 1.0);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          this.soundscapeNodes.push({ osc, gain });
+        });
+      } else if (type === 'RAIN') {
+        // Procedural soothing rain / pink-noise simulation using detuned oscillators
+        [120, 180, 240].forEach(freq => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, now);
+          gain.gain.setValueAtTime(0.001, now);
+          gain.gain.linearRampToValueAtTime(0.04, now + 1.2);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          this.soundscapeNodes.push({ osc, gain });
+        });
+      } else {
+        // Nature birds soft high frequencies
+        [880, 1320].forEach(freq => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now);
+          gain.gain.setValueAtTime(0.001, now);
+          gain.gain.linearRampToValueAtTime(0.03, now + 0.8);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          this.soundscapeNodes.push({ osc, gain });
+        });
+      }
+    } catch {
+      // Ignore
+    }
+  }
+
+  public stopSoundscape(): void {
+    try {
+      this.soundscapeNodes.forEach(({ osc, gain }) => {
+        try {
+          if (this.audioCtx) {
+            gain.gain.linearRampToValueAtTime(0.0001, this.audioCtx.currentTime + 0.3);
+            setTimeout(() => {
+              try { osc.stop(); osc.disconnect(); } catch {}
+            }, 350);
+          } else {
+            osc.stop();
+          }
+        } catch {}
+      });
+      this.soundscapeNodes = [];
+    } catch {}
+  }
+
   // Play repeating reminder alert chimes
   public playReminderAlarmSequence(cycles = 2): void {
     for (let i = 0; i < cycles; i++) {
@@ -337,19 +465,64 @@ class AudioService {
     }
   }
 
-  // Find highest-quality human-sounding voice in the browser
-  private selectBestHumanVoice(): SpeechSynthesisVoice | null {
+  // Detect Indian regional language or English from text content
+  public detectLanguage(text: string): string {
+    if (/[\u0B80-\u0BFF]/.test(text)) return 'ta-IN'; // Tamil
+    if (/[\u0900-\u097F]/.test(text)) return 'hi-IN'; // Hindi
+    if (/[\u0980-\u09FF]/.test(text)) return 'bn-IN'; // Bengali / Assamese
+    return 'en-IN';
+  }
+
+  // Find highest-quality human-sounding voice in the browser, matching preferred language
+  private selectBestHumanVoice(preferredLang?: string): SpeechSynthesisVoice | null {
     const voices = this.getVoices();
     if (!voices || voices.length === 0) return null;
 
+    const targetPrefix = preferredLang ? preferredLang.split('-')[0].toLowerCase() : 'en';
     const isFemalePreferred = this.currentVoiceProfile.gender === 'female';
 
-    // 1. Check for premium/natural/neural voices first
+    // 1. Language-matched voices
+    const langMatches = voices.filter((v) => v.lang.toLowerCase().startsWith(targetPrefix));
+    if (langMatches.length > 0) {
+      // Look for natural/neural voices in this language
+      const naturalLang = langMatches.find((v) => {
+        const n = v.name.toLowerCase();
+        return (
+          n.includes('natural') ||
+          n.includes('neural') ||
+          n.includes('google') ||
+          n.includes('online') ||
+          n.includes('premium') ||
+          n.includes('multilingual')
+        );
+      });
+      if (naturalLang) return naturalLang;
+
+      // Gender preference for language matches
+      if (isFemalePreferred) {
+        const female = langMatches.find((v) => {
+          const n = v.name.toLowerCase();
+          return (
+            n.includes('female') ||
+            n.includes('woman') ||
+            n.includes('girl') ||
+            n.includes('samantha') ||
+            n.includes('swara') ||
+            n.includes('kalpana') ||
+            n.includes('valluvar')
+          );
+        });
+        if (female) return female;
+      }
+      return langMatches[0];
+    }
+
+    // 2. High-grade natural/neural voices (Google, Edge Natural, Siri, etc.)
     const naturalMatches = voices.filter((v) => {
       const name = v.name.toLowerCase();
       const lang = v.lang.toLowerCase();
-      const isEnglishOrIndian = lang.startsWith('en') || lang.startsWith('hi') || lang.startsWith('as') || lang.startsWith('bn');
-      if (!isEnglishOrIndian) return false;
+      const isEnOrIn = lang.startsWith('en') || lang.startsWith('hi') || lang.startsWith('ta') || lang.startsWith('bn');
+      if (!isEnOrIn) return false;
 
       return (
         name.includes('natural') ||
@@ -372,7 +545,15 @@ class AudioService {
       if (isFemalePreferred) {
         const femaleVoice = naturalMatches.find((v) => {
           const n = v.name.toLowerCase();
-          return n.includes('female') || n.includes('samantha') || n.includes('ava') || n.includes('serena') || n.includes('neerja') || n.includes('jenny') || n.includes('sonia');
+          return (
+            n.includes('female') ||
+            n.includes('samantha') ||
+            n.includes('ava') ||
+            n.includes('serena') ||
+            n.includes('neerja') ||
+            n.includes('jenny') ||
+            n.includes('sonia')
+          );
         });
         if (femaleVoice) return femaleVoice;
       } else {
@@ -385,7 +566,7 @@ class AudioService {
       return naturalMatches[0];
     }
 
-    // 2. English/India/UK/US voices
+    // 3. English/India/UK/US voices
     const enVoices = voices.filter((v) => v.lang.startsWith('en'));
     if (enVoices.length > 0) {
       return enVoices[0];
@@ -398,9 +579,14 @@ class AudioService {
   public async speak(
     text: string,
     onEnd?: () => void,
-    options?: { voice?: 'Kore' | 'Puck' | 'Zephyr' | 'Charon' | 'Fenrir'; fallbackOnly?: boolean; base64Audio?: string | null }
+    options?: {
+      voice?: 'Kore' | 'Puck' | 'Zephyr' | 'Charon' | 'Fenrir';
+      fallbackOnly?: boolean;
+      base64Audio?: string | null;
+      langCode?: string;
+    }
   ): Promise<void> {
-    if (!text) {
+    if (!text || !text.trim()) {
       if (onEnd) onEnd();
       return;
     }
@@ -413,28 +599,44 @@ class AudioService {
       if (success) return;
     }
 
-    // 2. Unless client requested offline/fallback-only, attempt server-side realistic human voice (Gemini TTS)
-    if (!options?.fallbackOnly && typeof window !== 'undefined' && navigator.onLine) {
+    // 2. Unless offline/fallback-only, attempt server-side realistic human voice (Gemini TTS) with fast 1000ms timeout
+    if (
+      !options?.fallbackOnly &&
+      this.serverTtsAvailable !== false &&
+      typeof window !== 'undefined' &&
+      navigator.onLine
+    ) {
       try {
         const voiceChoice = options?.voice || this.currentVoiceProfile.geminiVoice;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 1000);
+
         const res = await fetch('/api/ai/speak', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
           body: JSON.stringify({
             text,
             voice: voiceChoice,
           }),
         });
+        clearTimeout(timeoutId);
 
         if (res.ok) {
           const data = await res.json();
           if (data.audioBase64) {
+            this.serverTtsAvailable = true;
             const played = this.playPcmAudio(data.audioBase64, data.sampleRate || 24000, onEnd);
             if (played) return;
+          } else {
+            // Server reported offline_fallback (API key not configured)
+            this.serverTtsAvailable = false;
           }
+        } else {
+          this.serverTtsAvailable = false;
         }
       } catch {
-        // Fallback to tuned browser speech synthesis below
+        this.serverTtsAvailable = false;
       }
     }
 
@@ -445,40 +647,81 @@ class AudioService {
     }
 
     try {
-      this.synth.cancel();
+      // Chromium recovery: If synth was paused by browser, resume immediately
+      if (this.synth.paused) {
+        this.synth.resume();
+      }
+      if (this.synth.speaking) {
+        this.synth.cancel();
+      }
 
+      const langCode = options?.langCode || this.detectLanguage(text);
       const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = langCode;
       // Gentle, calm human cadence (0.92 = comforting, natural conversational speed)
       utterance.rate = 0.92;
       // Natural human pitch (1.0 = smooth, non-robotic)
       utterance.pitch = 1.0;
       utterance.volume = 1.0;
 
-      const chosenVoice = this.selectBestHumanVoice();
+      const chosenVoice = this.selectBestHumanVoice(langCode);
       if (chosenVoice) {
         utterance.voice = chosenVoice;
       }
 
       this.isSpeakingNow = true;
+      this.activeUtterance = utterance;
+      // Also pin to window object to prevent aggressive Chromium V8 garbage collection
+      if (typeof window !== 'undefined') {
+        (window as any).__mindMithraActiveUtterance = utterance;
+      }
 
-      utterance.onend = () => {
+      let hasFinished = false;
+      const finish = () => {
+        if (hasFinished) return;
+        hasFinished = true;
+        if (this.speechWatchdogTimer) {
+          clearTimeout(this.speechWatchdogTimer);
+          this.speechWatchdogTimer = null;
+        }
         this.isSpeakingNow = false;
+        this.activeUtterance = null;
+        if (typeof window !== 'undefined') {
+          (window as any).__mindMithraActiveUtterance = null;
+        }
         if (onEnd) onEnd();
       };
 
-      utterance.onerror = () => {
-        this.isSpeakingNow = false;
-        if (onEnd) onEnd();
-      };
+      utterance.onend = finish;
+      utterance.onerror = finish;
 
-      this.synth.speak(utterance);
+      // Chrome SpeechSynthesis failsafe: Chrome can occasionally drop utterance.onend on longer sentences
+      const maxExpectedDurationMs = Math.max(3500, Math.ceil(text.length * 110) + 2000);
+      this.speechWatchdogTimer = setTimeout(() => {
+        if (this.activeUtterance === utterance && this.isSpeakingNow) {
+          finish();
+        }
+      }, maxExpectedDurationMs);
+
+      // Brief tick (25ms) allows any prior cancel() to drain before queuing new speech
+      setTimeout(() => {
+        if (this.synth) {
+          if (this.synth.paused) this.synth.resume();
+          this.synth.speak(utterance);
+        }
+      }, 25);
     } catch {
       this.isSpeakingNow = false;
+      this.activeUtterance = null;
       if (onEnd) onEnd();
     }
   }
 
   public stopSpeaking(): void {
+    if (this.speechWatchdogTimer) {
+      clearTimeout(this.speechWatchdogTimer);
+      this.speechWatchdogTimer = null;
+    }
     if (this.synth) {
       try {
         this.synth.cancel();
@@ -494,6 +737,10 @@ class AudioService {
       }
       this.currentPcmSource = null;
     }
+    this.activeUtterance = null;
+    if (typeof window !== 'undefined') {
+      (window as any).__mindMithraActiveUtterance = null;
+    }
     this.isSpeakingNow = false;
   }
 
@@ -505,22 +752,38 @@ class AudioService {
   public parseOfflineIntent(transcript: string): ParsedVoiceCommand {
     const raw = transcript.toLowerCase().trim();
 
-    if (raw.includes('start') || raw.includes('play') || raw.includes('game') || raw.includes('activity') || raw.includes('today')) {
+    if (raw.includes('help') || raw.includes('emergency') || raw.includes('sos') || raw.includes('danger') || raw.includes('save me')) {
       return {
-        intent: 'START_ACTIVITY',
-        confidence: 0.95,
-        responseVoiceText: 'Opening your personalized activity. Let us have a wonderful time together, my dear friend!',
-        actionRoute: 'GAMES',
+        intent: 'TRIGGER_SOS',
+        confidence: 0.98,
+        responseVoiceText: 'Alerting your caregiver immediately. Take a deep breath, you are safe and loved.',
       };
     }
 
-    if (raw.includes('memory') || raw.includes('photo') || raw.includes('album') || raw.includes('family') || raw.includes('who is')) {
+    if (raw.includes('call') || raw.includes('phone') || raw.includes('contact') || raw.includes('talk to')) {
       return {
-        intent: 'OPEN_MEMORIES',
-        confidence: 0.92,
-        extractedQuery: transcript,
-        responseVoiceText: 'Opening your precious family photos and memories. It is always heartwarming to revisit them with you.',
-        actionRoute: 'MEMORIES',
+        intent: 'CALL_FAMILY',
+        confidence: 0.95,
+        responseVoiceText: 'Opening your family contacts to call your loved ones.',
+        actionRoute: 'FAMILY_TREE',
+      };
+    }
+
+    if (raw.includes('daughter') || raw.includes('priyanka') || raw.includes('voice note') || raw.includes('family voice')) {
+      return {
+        intent: 'PLAY_FAMILY_VOICE',
+        confidence: 0.95,
+        responseVoiceText: "Playing your daughter Priyanka's comforting voice note for you now.",
+        actionRoute: 'FAMILY_TREE',
+      };
+    }
+
+    if (raw.includes('family') || raw.includes('tree') || raw.includes('children') || raw.includes('granddaughter') || raw.includes('ananya')) {
+      return {
+        intent: 'OPEN_FAMILY_TREE',
+        confidence: 0.95,
+        responseVoiceText: 'Opening your family circle and loved ones tree.',
+        actionRoute: 'FAMILY_TREE',
       };
     }
 
@@ -533,12 +796,49 @@ class AudioService {
       };
     }
 
-    if (raw.includes('music') || raw.includes('song') || raw.includes('flute') || raw.includes('relax') || raw.includes('peace')) {
+    if (raw.includes('music') || raw.includes('song') || raw.includes('flute') || raw.includes('peaceful melody')) {
       return {
         intent: 'PLAY_MUSIC',
         confidence: 0.92,
         responseVoiceText: 'Playing gentle traditional flute and nature sounds to help you rest and feel at peace.',
         actionRoute: 'RELAX',
+      };
+    }
+
+    if (raw.includes('soundscape') || raw.includes('sounds') || raw.includes('rain') || raw.includes('birds') || raw.includes('sound of')) {
+      return {
+        intent: 'OPEN_SOUNDSCAPES',
+        confidence: 0.92,
+        responseVoiceText: 'Playing relaxing nature and courtyard sounds for you.',
+        actionRoute: 'RADIO',
+      };
+    }
+
+    if (raw.includes('day') || raw.includes('journal') || raw.includes('diary') || raw.includes('today i') || raw.includes('went to')) {
+      return {
+        intent: 'OPEN_JOURNAL',
+        confidence: 0.93,
+        responseVoiceText: 'Opening your daily journal. I would love to hear all about your day!',
+        actionRoute: 'JOURNAL',
+      };
+    }
+
+    if (raw.includes('memory') || raw.includes('photo') || raw.includes('album') || raw.includes('who is')) {
+      return {
+        intent: 'OPEN_MEMORIES',
+        confidence: 0.92,
+        extractedQuery: transcript,
+        responseVoiceText: 'Opening your precious family photos and memories. It is always heartwarming to revisit them with you.',
+        actionRoute: 'MEMORIES',
+      };
+    }
+
+    if (raw.includes('game') || raw.includes('activity') || raw.includes('exercise') || raw.includes('play') || raw.includes('start') || raw.includes('puzzle')) {
+      return {
+        intent: 'START_ACTIVITY',
+        confidence: 0.95,
+        responseVoiceText: 'Opening your personalized activity. Let us have a wonderful time together, my dear friend!',
+        actionRoute: 'GAMES',
       };
     }
 
@@ -564,8 +864,12 @@ class AudioService {
       intent: 'UNKNOWN',
       confidence: 0.5,
       extractedQuery: transcript,
-      responseVoiceText: 'I am right here with you, your friendly companion. We can chat, look at family photos, or start today\'s gentle game.',
+      responseVoiceText: 'I am right here with you, your Mind Mithra companion. We can chat, look at family photos, or start today\'s gentle game.',
     };
+  }
+
+  public parseIntentOffline(transcript: string): ParsedVoiceCommand {
+    return this.parseOfflineIntent(transcript);
   }
 }
 

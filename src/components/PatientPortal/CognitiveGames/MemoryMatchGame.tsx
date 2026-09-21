@@ -19,6 +19,8 @@ import { getCulturalGameDataSet, evaluateGameAdaptation, AdaptationOutput } from
 import { audioService } from '../../../lib/audioService';
 import { localDB } from '../../../lib/storage';
 import { GameCompletionModal } from './GameCompletionModal';
+import { gameVoiceController } from '../../../lib/gameVoiceController';
+import { GameVoiceOverlay } from './GameVoiceOverlay';
 
 interface MemoryMatchGameProps {
   patient: PatientProfile;
@@ -57,6 +59,11 @@ export const MemoryMatchGame: React.FC<MemoryMatchGameProps> = ({
   const [latestResult, setLatestResult] = useState<GameSessionResult | null>(null);
   const [adaptationOutput, setAdaptationOutput] = useState<AdaptationOutput | null>(null);
   const [isEvaluating, setIsEvaluating] = useState(false);
+
+  const [voiceAnswersCount, setVoiceAnswersCount] = useState<number>(0);
+  const [touchAnswersCount, setTouchAnswersCount] = useState<number>(0);
+  const [hintsUsed, setHintsUsed] = useState<number>(0);
+  const [isPaused, setIsPaused] = useState<boolean>(false);
 
   const totalPairsCount = currentDifficulty === 1 ? 2 : currentDifficulty === 2 ? 3 : currentDifficulty === 3 ? 4 : 6;
 
@@ -106,11 +113,105 @@ export const MemoryMatchGame: React.FC<MemoryMatchGameProps> = ({
 
   useEffect(() => {
     initGame();
+    gameVoiceController.speakQuestion(
+      `Welcome to Heritage Memory Match. Tap any card or say its name to find matching pairs.`,
+      true
+    );
   }, [currentDifficulty]);
 
-  const handleCardClick = (card: CardItem) => {
+  // Synchronize Voice Context with available cards
+  useEffect(() => {
+    if (isCompleted || cards.length === 0) {
+      gameVoiceController.stopListening();
+      return;
+    }
+
+    const availableCards = cards.filter((c) => !c.isMatched);
+    const options = availableCards.map((c) => ({
+      id: c.instanceId,
+      label: c.label,
+      sublabel: c.sublabel,
+      synonyms: [c.label.toLowerCase(), c.sublabel?.toLowerCase() || '', c.itemId],
+      isCorrect: true,
+    }));
+
+    gameVoiceController.setContext(
+      {
+        gameId: 'game-01-memory-match',
+        gameCategory: 'MEMORY',
+        gameTitle: 'Heritage Memory Match',
+        level: currentDifficulty,
+        question: 'Which cultural card would you like to reveal?',
+        options,
+        hintText: 'Try matching cards with identical symbols.',
+        patientName: patient.name.split(' ')[0],
+        language,
+      },
+      {
+        onAnswer: (instanceId) => {
+          const targetCard = cards.find((c) => c.instanceId === instanceId);
+          if (targetCard) {
+            setVoiceAnswersCount((v) => v + 1);
+            handleCardClick(targetCard, true);
+          }
+        },
+        onCommand: (cmd) => {
+          if (cmd === 'HINT') {
+            setHintsUsed((h) => h + 1);
+            handleHintRequest();
+          } else if (cmd === 'REPEAT') {
+            gameVoiceController.speakQuestion('Which cultural card would you like to reveal?', true);
+          } else if (cmd === 'PAUSE') {
+            setIsPaused(true);
+          } else if (cmd === 'CONTINUE') {
+            setIsPaused(false);
+          }
+        },
+      }
+    );
+
+    return () => {
+      gameVoiceController.stopListening();
+    };
+  }, [cards, isCompleted, currentDifficulty]);
+
+  const handleHintRequest = () => {
+    audioService.playFeedbackSound('GENTLE_TAP');
+    // Briefly reveal an unmatched pair
+    const unmatched = cards.filter((c) => !c.isMatched && !c.isFlipped);
+    if (unmatched.length >= 2) {
+      const firstTarget = unmatched[0];
+      const partner = unmatched.find(
+        (c) => c.itemId === firstTarget.itemId && c.instanceId !== firstTarget.instanceId
+      );
+      if (partner) {
+        setCards((prev) =>
+          prev.map((c) =>
+            c.instanceId === firstTarget.instanceId || c.instanceId === partner.instanceId
+              ? { ...c, isFlipped: true }
+              : c
+          )
+        );
+        setTimeout(() => {
+          setCards((prev) =>
+            prev.map((c) =>
+              (c.instanceId === firstTarget.instanceId || c.instanceId === partner.instanceId) && !c.isMatched
+                ? { ...c, isFlipped: false }
+                : c
+            )
+          );
+        }, 1500);
+      }
+    }
+  };
+
+  const handleCardClick = (card: CardItem, isVoice: boolean = false) => {
     if (card.isFlipped || card.isMatched || selectedCards.length === 2 || isEvaluating) {
       return;
+    }
+
+    if (!isVoice) {
+      setTouchAnswersCount((t) => t + 1);
     }
 
     audioService.playFeedbackSound('GENTLE_TAP');
@@ -183,6 +284,10 @@ export const MemoryMatchGame: React.FC<MemoryMatchGameProps> = ({
       abandoned: false,
       timestamp: new Date().toISOString(),
       feedbackText: 'Wonderful visual recall on North Eastern heritage cards!',
+      voiceAnswersCount,
+      touchAnswersCount,
+      voiceInteractions: voiceAnswersCount + (hintsUsed > 0 ? 1 : 0),
+      hintsUsed,
     };
 
     // Calculate closed-loop AI adaptation
@@ -260,6 +365,25 @@ export const MemoryMatchGame: React.FC<MemoryMatchGameProps> = ({
             {moves === 0 ? 'Ready' : moves < totalPairsCount * 2 ? 'Calm' : 'Patient'}
           </p>
         </div>
+      </div>
+
+      {/* Universal Voice Interaction Overlay */}
+      <div className="mb-6">
+        <GameVoiceOverlay
+          onManualRepeat={() => {
+            gameVoiceController.speakQuestion('Which cultural card would you like to reveal?', true);
+          }}
+          onManualHint={() => {
+            setHintsUsed((h) => h + 1);
+            handleHintRequest();
+          }}
+          onTogglePause={() => {
+            const next = !isPaused;
+            setIsPaused(next);
+            gameVoiceController.processSpokenTranscript(next ? 'pause' : 'continue');
+          }}
+          isPaused={isPaused}
+        />
       </div>
 
       {/* Game Board Grid */}

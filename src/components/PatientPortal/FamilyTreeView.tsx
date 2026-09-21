@@ -82,30 +82,15 @@ export function FamilyTreeView({ onBack, patient, language }: FamilyTreeViewProp
 
   // Voice playback with SpeechSynthesis
   const speakText = (text: string, memberId: string) => {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      if (playingVoiceId === memberId) {
-        setPlayingVoiceId(null);
-        return;
-      }
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.88;
-      utterance.pitch = 1.05;
-      utterance.onend = () => setPlayingVoiceId(null);
-      utterance.onerror = () => setPlayingVoiceId(null);
-      setPlayingVoiceId(memberId);
-      window.speechSynthesis.speak(utterance);
-    } else {
-      audioService.playFeedbackSound('SUCCESS');
+    if (playingVoiceId === memberId) {
+      audioService.stopSpeaking();
+      setPlayingVoiceId(null);
+      return;
     }
+    setPlayingVoiceId(memberId);
+    audioService.speak(text, () => setPlayingVoiceId(null));
   };
 
-  // Auto-populate entire family kinship tree with AI
-  const handleAutoPopulateFamily = () => {
-    audioService.playFeedbackSound('SUCCESS');
-    const updated = localDB.autoPopulateFamilyForPatient(patient.id);
-    setMembers(updated);
-  };
 
   // Open Quick Preset template
   const handleApplyPreset = (presetType: string) => {
@@ -342,16 +327,6 @@ export function FamilyTreeView({ onBack, patient, language }: FamilyTreeViewProp
 
         {/* Header Action Buttons */}
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-          {/* 1-Tap AI Auto-Add Kinship Button */}
-          <button
-            onClick={handleAutoPopulateFamily}
-            className="flex items-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-bold rounded-2xl shadow-sm transition text-xs"
-            title="Automatically add complete multi-generation relatives"
-          >
-            <Sparkles className="w-4 h-4 animate-pulse" />
-            <span>AI Auto-Add Relatives</span>
-          </button>
-
           <button
             onClick={() => {
               setEditingMemberId(null);

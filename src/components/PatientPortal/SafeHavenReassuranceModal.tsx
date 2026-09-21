@@ -42,14 +42,8 @@ export const SafeHavenReassuranceModal: React.FC<SafeHavenReassuranceModalProps>
   if (!isOpen) return null;
 
   const speakReassurance = () => {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const message = `Namaskar ${patient.name.split(' ')[0]}. Do not worry. You are safe at home in your Tezpur residence. Your daughter Priyanka is right nearby and taking care of you.`;
-      const utterance = new SpeechSynthesisUtterance(message);
-      utterance.rate = 0.85;
-      utterance.pitch = 1.0;
-      window.speechSynthesis.speak(utterance);
-    }
+    const message = `Namaskar ${patient.name.split(' ')[0]}. Do not worry. You are safe at home in your Tezpur residence. Your daughter Priyanka is right nearby and taking care of you.`;
+    audioService.speak(message);
   };
 
   const handleStartCall = () => {
