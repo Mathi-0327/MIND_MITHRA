@@ -1,14 +1,18 @@
 services:
+  # Fullstack Web Service (Frontend + Node.js API Backend + SQLite)
   - type: web
     name: mind-mithra
     runtime: node
     plan: free
+    region: oregon
     buildCommand: npm install && npm run build
     startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
       - key: GEMINI_API_KEY
+        sync: false
+      - key: VITE_GEMINI_API_KEY
         sync: false
       - key: SESSION_SECRET
         generateValue: true
